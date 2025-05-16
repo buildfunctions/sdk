@@ -1,0 +1,22 @@
+{
+  "name": "buildfunctions",
+  "version": "0.0.2",
+  "description": "CLI coming soon",
+  "main": "index.js",
+  "bin": {
+    "deploy": "./index.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/buildfunctions/cli.git"
+  },
+  "author": "Buildfunctions",
+  "bugs": {
+    "url": "https://github.com/buildfunctions/cli/issues"
+  },
+  "homepage": "https://github.com/buildfunctions/cli#readme"
+}
