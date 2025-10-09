@@ -1,22 +1,43 @@
 {
   "name": "buildfunctions",
-  "version": "0.0.2",
-  "description": "CLI coming soon",
-  "main": "index.js",
+  "version": "0.0.3",
+  "description": "The Buildfunctions SDK (JavaScript and TypeScript)",
+  "type": "module",
+  "main": "./dist/test.js",
+  "types": "./dist/test.d.ts",
   "bin": {
-    "deploy": "./index.js"
+    "buildfunctions": "./dist/cli.js"
   },
+  "exports": {
+    ".": {
+      "types": "./dist/test.d.ts",
+      "import": "./dist/test.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index.js"
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/cli.js",
+    "prepublishOnly": "npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/buildfunctions/cli.git"
+    "url": "git+https://github.com/buildfunctions/sdk.git"
   },
+  "keywords": [
+    "buildfunctions",
+    "sdk"
+  ],
   "author": "Buildfunctions",
   "bugs": {
-    "url": "https://github.com/buildfunctions/cli/issues"
+    "url": "https://github.com/buildfunctions/sdk/issues"
   },
-  "homepage": "https://github.com/buildfunctions/cli#readme"
+  "homepage": "https://github.com/buildfunctions/sdk#readme",
+  "devDependencies": {
+    "typescript": "5.9.2"
+  }
 }

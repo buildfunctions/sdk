@@ -1,1 +1,1 @@
-# Buildfunctions CLI coming soon
+# The Buildfunctions SDK (JavaScript and TypeScript)
