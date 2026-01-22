@@ -67,7 +67,7 @@ export interface CreateFunctionOptions {
   memory?: string | number;  // "2GB", "1024MB", or number in MB
   timeout?: number;
   envVariables?: Array<{ key: string; value: string }>;
-  requirements?: string;
+  requirements?: string | string[];
   cronSchedule?: string;
   // GPU-specific
   processorType?: 'CPU' | 'GPU';
@@ -105,7 +105,7 @@ export interface CPUSandboxConfig {
   memory?: string | number;  // "2GB", "1024MB", or number in MB
   timeout?: number;
   envVariables?: Array<{ key: string; value: string }>;
-  requirements?: string;
+  requirements?: string | string[];
 }
 
 export interface GPUSandboxConfig extends CPUSandboxConfig {

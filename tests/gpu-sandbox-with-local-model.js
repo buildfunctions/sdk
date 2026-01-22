@@ -74,8 +74,8 @@ def handler():
       memory: 50000,
       timeout: 300,
       code: handlerCode,
-      requirements: '',
       model: '/home/production/Qwen/Qwen3-8B',
+      requirements: "torch"
     })
     console.log('   GPU Sandbox created')
     console.log('   ID:', sandbox.id)

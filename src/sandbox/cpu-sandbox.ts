@@ -116,6 +116,12 @@ export function setCpuSandboxApiKey(apiKey: string, baseUrl?: string): void {
   globalBaseUrl = baseUrl;
 }
 
+function formatRequirements(requirements: string | string[] | undefined): string {
+  if (!requirements) return '';
+  if (Array.isArray(requirements)) return requirements.join('\n');
+  return requirements;
+}
+
 function validateConfig(config: CPUSandboxConfig): void {
   if (!config.name || typeof config.name !== 'string') {
     throw new ValidationError('Sandbox name is required');
@@ -301,7 +307,7 @@ export const CPUSandbox = {
       memoryAllocated: config.memory ? parseMemory(config.memory) : 128,
       timeout: config.timeout ?? 10,
       envVariables: JSON.stringify(config.envVariables ?? []),
-      requirements: config.requirements ?? '',
+      requirements: formatRequirements(config.requirements),
       cronExpression: '',
       subdomain: name,
       totalVariables: (config.envVariables ?? []).length,

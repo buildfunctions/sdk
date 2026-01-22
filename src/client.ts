@@ -23,6 +23,12 @@ import type {
 const DEFAULT_BASE_URL = 'https://www.buildfunctions.com';
 const DEFAULT_GPU_BUILD_URL = 'https://prod-gpu-build.buildfunctions.link';
 
+function formatRequirements(requirements: string | string[] | undefined): string {
+  if (!requirements) return '';
+  if (Array.isArray(requirements)) return requirements.join('\n');
+  return requirements;
+}
+
 /**
  * Functions management interface
  */
@@ -123,12 +129,12 @@ function createFunctionsManager(http: HttpClient): FunctionsManager {
           memory: options.memory ? parseMemory(options.memory) : 1024,
           timeout: options.timeout ?? 60,
         },
-        dependencies: options.requirements,
+        dependencies: formatRequirements(options.requirements),
         envVariables: options.envVariables ? Object.fromEntries(
           options.envVariables.map(v => [v.key, v.value])
         ) : undefined,
         cronSchedule: options.cronSchedule,
-        framework: options.framework ?? detectFramework(options.requirements),
+        framework: options.framework ?? detectFramework(formatRequirements(options.requirements)),
         modelName: options.modelName,
         modelPath: options.modelPath,
       });
@@ -151,10 +157,10 @@ function createFunctionsManager(http: HttpClient): FunctionsManager {
       memoryAllocated: options.memory ? parseMemory(options.memory) : 128,
       timeout: options.timeout ?? 10,
       envVariables: JSON.stringify(options.envVariables ?? []),
-      requirements: options.requirements ?? '',
+      requirements: formatRequirements(options.requirements),
       cronExpression: options.cronSchedule ?? '',
       processorType: 'CPU',
-      selectedFramework: options.framework ?? detectFramework(options.requirements),
+      selectedFramework: options.framework ?? detectFramework(formatRequirements(options.requirements)),
       subdomain: name,
       totalVariables: (options.envVariables ?? []).length,
       functionCount: 0,

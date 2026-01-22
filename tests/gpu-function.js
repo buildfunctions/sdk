@@ -74,9 +74,9 @@ def handler():
       code: functionCode,
       language: 'python',
       gpu: 'T4',
-      memory: 50000,
+      memory: "50000MB",
       timeout: 300,
-      requirements: '',
+      requirements: ['transformers==4.47.1', 'torch', 'accelerate'],
     })
 
     console.log('   GPU Function deployed')

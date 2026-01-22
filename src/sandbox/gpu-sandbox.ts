@@ -152,6 +152,12 @@ function getLocalModelInfo(modelPath: string, sandboxName: string): LocalModelIn
   };
 }
 
+function formatRequirements(requirements: string | string[] | undefined): string {
+  if (!requirements) return '';
+  if (Array.isArray(requirements)) return requirements.join('\n');
+  return requirements;
+}
+
 function buildRequestBody(config: GPUSandboxConfig, localModelInfo: LocalModelInfo | null): Record<string, unknown> {
   const name = config.name.toLowerCase();
   const language = config.language;
@@ -159,6 +165,7 @@ function buildRequestBody(config: GPUSandboxConfig, localModelInfo: LocalModelIn
   const code = config.code ?? '';
   const fileExt = getFileExtension(language);
   const gpu = config.gpu ?? 'T4';
+  const requirements = formatRequirements(config.requirements);
 
   const hasLocalModel = localModelInfo !== null;
   const modelName = hasLocalModel ? localModelInfo.sanitizedModelName : null;
@@ -167,7 +174,7 @@ function buildRequestBody(config: GPUSandboxConfig, localModelInfo: LocalModelIn
     name,
     language,
     runtime,
-    sourceWith: code, // source with env vars
+    sourceWith: code,
     sourceWithout: code,
     fileExt,
     processorType: 'GPU',
@@ -177,10 +184,10 @@ function buildRequestBody(config: GPUSandboxConfig, localModelInfo: LocalModelIn
     timeout: config.timeout ?? 300,
     cpuCores: 2,
     envVariables: JSON.stringify(config.envVariables ?? []),
-    requirements: config.requirements ?? '',
+    requirements,
     cronExpression: '',
     totalVariables: (config.envVariables ?? []).length,
-    selectedFramework: detectFramework(config.requirements),
+    selectedFramework: detectFramework(requirements),
     useEmptyFolder: !hasLocalModel,
     modelPath: hasLocalModel ? `${localModelInfo.sanitizedModelName}/mnt/storage/${localModelInfo.localUploadFileName}` : null,
     selectedFunction: {

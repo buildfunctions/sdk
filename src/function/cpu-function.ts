@@ -42,6 +42,12 @@ function getDefaultRuntime(language: string): string {
   return language;
 }
 
+function formatRequirements(requirements: string | string[] | undefined): string {
+  if (!requirements) return '';
+  if (Array.isArray(requirements)) return requirements.join('\n');
+  return requirements;
+}
+
 function validateOptions(options: CPUFunctionOptions): void {
   if (!options.name || typeof options.name !== 'string') {
     throw new ValidationError('Function name is required');
@@ -79,7 +85,7 @@ function buildRequestBody(options: CPUFunctionOptions): Record<string, unknown> 
     memoryAllocated: config?.memory ? parseMemory(config.memory) : 1024,
     timeout: config?.timeout ?? 10,
     envVariables: envVariables ? JSON.stringify(Object.entries(envVariables).map(([key, value]) => ({ key, value }))) : '[]',
-    requirements: dependencies ?? '',
+    requirements: formatRequirements(dependencies),
     cronExpression: cronSchedule ?? '',
     totalVariables: envVariables ? Object.keys(envVariables).length : 0,
   };

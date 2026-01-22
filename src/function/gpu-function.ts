@@ -54,6 +54,12 @@ function getDefaultRuntime(language: string): string {
   return language;
 }
 
+function formatRequirements(requirements: string | string[] | undefined): string {
+  if (!requirements) return '';
+  if (Array.isArray(requirements)) return requirements.join('\n');
+  return requirements;
+}
+
 function validateOptions(options: GPUFunctionOptions): void {
   if (!options.name || typeof options.name !== 'string') {
     throw new ValidationError('Function name is required');
@@ -110,10 +116,10 @@ function buildRequestBody(options: GPUFunctionOptions): Record<string, unknown> 
     timeout: config?.timeout ?? 180,
     cpuCores: config?.cpuCores ?? 2,
     envVariables: envVariables ? JSON.stringify(Object.entries(envVariables).map(([key, value]) => ({ key, value }))) : '[]',
-    requirements: dependencies ?? '',
+    requirements: formatRequirements(dependencies),
     cronExpression: cronSchedule ?? '',
     totalVariables: envVariables ? Object.keys(envVariables).length : 0,
-    selectedFramework: framework ?? detectFramework(dependencies),
+    selectedFramework: framework ?? detectFramework(formatRequirements(dependencies)),
     // GPU Function requires these fields
     useEmptyFolder: true,
     selectedFunction: {
