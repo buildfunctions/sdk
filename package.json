@@ -1,43 +1,53 @@
 {
   "name": "buildfunctions",
-  "version": "0.0.3",
-  "description": "The Buildfunctions SDK (JavaScript and TypeScript)",
+  "version": "0.0.6",
+  "description": "The Buildfunctions SDK for Agents: Hardware-isolated CPU and GPU Sandboxes for untrusted AI actions",
   "type": "module",
-  "main": "./dist/test.js",
-  "types": "./dist/test.d.ts",
-  "bin": {
-    "buildfunctions": "./dist/cli.js"
-  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/test.d.ts",
-      "import": "./dist/test.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "start": "node dist/cli.js",
-    "prepublishOnly": "npm run build",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build",
+    "typecheck": "tsc --noEmit"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/buildfunctions/sdk.git"
   },
   "keywords": [
-    "buildfunctions",
-    "sdk"
+    "AIAgents",
+    "AIInfrastructure",
+    "AIApps",
+    "Serverless",
+    "GPUs",
+    "Sandboxes",
+    "DeveloperExperience"
   ],
   "author": "Buildfunctions",
   "bugs": {
     "url": "https://github.com/buildfunctions/sdk/issues"
   },
-  "homepage": "https://github.com/buildfunctions/sdk#readme",
+  "homepage": "https://www.buildfunctions.com",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "devDependencies": {
-    "typescript": "5.9.2"
+    "@types/node": "25.0.10",
+    "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "dotenv": "17.2.3"
   }
 }
