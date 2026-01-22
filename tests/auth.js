@@ -19,7 +19,7 @@ async function testAuth() {
   try {
     // Step 1: Authenticate
     console.log('1. Authenticating...')
-    const buildfunctions = await Buildfunctions({ apiKey: API_TOKEN })
+    const buildfunctions = await Buildfunctions({ apiToken: API_TOKEN })
     console.log('   Authenticated as:', buildfunctions.user.username)
     console.log('   User ID:', buildfunctions.user.id)
     console.log('   Session expires:', buildfunctions.sessionExpiresAt)
