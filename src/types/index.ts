@@ -4,7 +4,7 @@
 
 // Client Configuration
 export interface BuildfunctionsConfig {
-  apiKey: string;
+  apiToken: string;
   baseUrl?: string;
   gpuBuildUrl?: string; // URL for GPU build server (storage server)
 }

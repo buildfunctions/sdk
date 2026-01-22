@@ -16,7 +16,7 @@ const DEFAULT_GPU_BUILD_URL = 'https://prod-gpu-build.buildfunctions.link';
 const DEFAULT_BASE_URL = 'https://www.buildfunctions.com';
 
 // Global configuration
-let globalApiKey: string | null = null;
+let globalApiToken: string | null = null;
 let globalGpuBuildUrl: string | undefined;
 let globalBaseUrl: string | undefined;
 let globalUserId: string | undefined;
@@ -24,17 +24,17 @@ let globalUsername: string | undefined;
 let globalComputeTier: string | undefined;
 
 /**
- * Set the API key for GPU Sandbox operations
+ * Set the API token for GPU Sandbox operations
  */
-export function setGpuSandboxApiKey(
-  apiKey: string,
+export function setGpuSandboxApiToken(
+  apiToken: string,
   gpuBuildUrl?: string,
   userId?: string,
   username?: string,
   computeTier?: string,
   baseUrl?: string
 ): void {
-  globalApiKey = apiKey;
+  globalApiToken = apiToken;
   globalGpuBuildUrl = gpuBuildUrl;
   globalUserId = userId;
   globalUsername = username;
@@ -224,7 +224,7 @@ function createGPUSandboxInstance(
   runtime: string,
   gpu: GPUType,
   endpoint: string,
-  apiKey: string,
+  apiToken: string,
   gpuBuildUrl: string,
   baseUrl: string
 ): GPUSandboxInstance {
@@ -239,7 +239,7 @@ function createGPUSandboxInstance(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiToken}`,
       },
     });
 
@@ -297,7 +297,7 @@ function createGPUSandboxInstance(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiToken}`,
       },
       body: JSON.stringify({
         sandboxId: id,
@@ -349,7 +349,7 @@ function createGPUSandboxInstance(
  */
 export const GPUSandbox = {
   create: async (config: GPUSandboxConfig): Promise<GPUSandboxInstance> => {
-    if (!globalApiKey) {
+    if (!globalApiToken) {
       throw new ValidationError('API key not set. Initialize Buildfunctions client first.');
     }
 
@@ -449,7 +449,7 @@ export const GPUSandbox = {
               sandboxRuntime,
               config.gpu ?? 'T4',
               sandboxEndpoint,
-              globalApiKey!,
+              globalApiToken!,
               gpuBuildUrl,
               baseUrl
             ));

@@ -21,7 +21,7 @@ async function testGpuSandboxWithModel() {
   try {
     // Step 1: Authenticate
     console.log('1. Authenticating...')
-    const buildfunctions = await Buildfunctions({ apiKey: API_TOKEN })
+    const buildfunctions = await Buildfunctions({ apiToken: API_TOKEN })
     console.log('   Authenticated as:', buildfunctions.user.username)
 
     // Step 2: Create GPU Sandbox with handler code and local model
@@ -74,7 +74,8 @@ def handler():
       memory: 50000,
       timeout: 300,
       code: handlerCode,
-      model: '/home/production/Qwen/Qwen3-8B',
+      // model: '/home/production/Qwen/Qwen3-8B',
+      model: '/home/projectmikey/.llama/checkpoints/remote-model',
       requirements: "torch"
     })
     console.log('   GPU Sandbox created')

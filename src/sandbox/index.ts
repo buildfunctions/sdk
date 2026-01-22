@@ -2,5 +2,5 @@
  * Sandbox exports
  */
 
-export { CPUSandbox, setCpuSandboxApiKey } from './cpu-sandbox.js';
-export { GPUSandbox, setGpuSandboxApiKey } from './gpu-sandbox.js';
+export { CPUSandbox, setCpuSandboxApiToken } from './cpu-sandbox.js';
+export { GPUSandbox, setGpuSandboxApiToken } from './gpu-sandbox.js';

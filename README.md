@@ -50,10 +50,10 @@ Get your API token at [buildfunctions.com/settings](https://www.buildfunctions.c
 ```javascript
 import { Buildfunctions, GPUSandbox } from 'buildfunctions'
 
-const apiKey = process.env.BUILDFUNCTIONS_API_KEY
+const apiToken = process.env.BUILDFUNCTIONS_API_KEY
 
 // Initialize
-const buildfunctions = new Buildfunctions({ apiKey })
+const buildfunctions = new Buildfunctions({ apiToken })
 if (!buildfunctions) {
   throw new Error('Failed to initialize Buildfunctions SDK')
 }

@@ -21,7 +21,7 @@ async function testCpuSandbox() {
   try {
     // Step 1: Authenticate
     console.log('1. Authenticating...')
-    const buildfunctions = await Buildfunctions({ apiKey: API_TOKEN })
+    const buildfunctions = await Buildfunctions({ apiToken: API_TOKEN })
     console.log('   Authenticated as:', buildfunctions.user.username)
 
     // Step 2: Create CPU Sandbox with handler code

@@ -1,6 +1,6 @@
 {
   "name": "buildfunctions",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "The Buildfunctions SDK for Agents: Hardware-isolated CPU and GPU Sandboxes for untrusted AI actions",
   "type": "module",
   "main": "./dist/index.js",

@@ -9,7 +9,7 @@
  *
  * // Initialize the client (authenticates with the API)
  * const buildfunctions = await Buildfunctions({
- *   apiKey: process.env.BUILDFUNCTIONS_API_KEY
+ *   apiToken: process.env.BUILDFUNCTIONS_API_KEY
  * });
  *
  * // Access authenticated user info
@@ -83,21 +83,21 @@ export { Buildfunctions, createClient } from './client.js';
 export type { BuildfunctionsClient, FunctionsManager } from './client.js';
 
 // Import internal setters for initialization
-import { setApiKey } from './function/cpu-function.js';
-import { setGpuApiKey } from './function/gpu-function.js';
-import { setCpuSandboxApiKey } from './sandbox/cpu-sandbox.js';
-import { setGpuSandboxApiKey } from './sandbox/gpu-sandbox.js';
+import { setApiToken } from './function/cpu-function.js';
+import { setGpuApiToken } from './function/gpu-function.js';
+import { setCpuSandboxApiToken } from './sandbox/cpu-sandbox.js';
+import { setGpuSandboxApiToken } from './sandbox/gpu-sandbox.js';
 
 export function init(
-  apiKey: string,
+  apiToken: string,
   baseUrl?: string,
   gpuBuildUrl?: string,
   userId?: string,
   username?: string,
   computeTier?: string
 ): void {
-  setApiKey(apiKey, baseUrl);
-  setGpuApiKey(apiKey, gpuBuildUrl, userId, username, computeTier);
-  setCpuSandboxApiKey(apiKey, baseUrl);
-  setGpuSandboxApiKey(apiKey, gpuBuildUrl, userId, username, computeTier, baseUrl);
+  setApiToken(apiToken, baseUrl);
+  setGpuApiToken(apiToken, gpuBuildUrl, userId, username, computeTier);
+  setCpuSandboxApiToken(apiToken, baseUrl);
+  setGpuSandboxApiToken(apiToken, gpuBuildUrl, userId, username, computeTier, baseUrl);
 }

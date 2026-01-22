@@ -6,9 +6,9 @@ import { HttpClient, createHttpClient } from './utils/http.js';
 import { NotFoundError } from './utils/errors.js';
 import { parseMemory } from './utils/memory.js';
 import { detectFramework } from './utils/framework.js';
-import { setCpuSandboxApiKey } from './sandbox/cpu-sandbox.js';
-import { setGpuSandboxApiKey } from './sandbox/gpu-sandbox.js';
-import { setGpuApiKey, GPUFunction } from './function/gpu-function.js';
+import { setCpuSandboxApiToken } from './sandbox/cpu-sandbox.js';
+import { setGpuSandboxApiToken } from './sandbox/gpu-sandbox.js';
+import { setGpuApiToken, GPUFunction } from './function/gpu-function.js';
 import type {
   BuildfunctionsConfig,
   DeployedFunction,
@@ -213,13 +213,13 @@ export interface BuildfunctionsClient {
  * Create a Buildfunctions SDK client
  */
 export async function Buildfunctions(config: BuildfunctionsConfig): Promise<BuildfunctionsClient> {
-  if (!config.apiKey) {
-    throw new Error('API key is required');
+  if (!config.apiToken) {
+    throw new Error('API token is required');
   }
 
   const http = createHttpClient({
     baseUrl: config.baseUrl ?? DEFAULT_BASE_URL,
-    apiKey: config.apiKey,
+    apiToken: config.apiToken,
   });
 
   // Authenticate with the API (uses API key from https://www.buildfunctions.com/settings)
@@ -237,9 +237,9 @@ export async function Buildfunctions(config: BuildfunctionsConfig): Promise<Buil
   const username = authResponse.user.username || undefined;
   const computeTier = authResponse.user.computeTier || undefined;
 
-  setCpuSandboxApiKey(authResponse.sessionToken, baseUrl);
-  setGpuSandboxApiKey(authResponse.sessionToken, gpuBuildUrl, userId, username, computeTier, baseUrl);
-  setGpuApiKey(authResponse.sessionToken, gpuBuildUrl, userId, username, computeTier);
+  setCpuSandboxApiToken(authResponse.sessionToken, baseUrl);
+  setGpuSandboxApiToken(authResponse.sessionToken, gpuBuildUrl, userId, username, computeTier, baseUrl);
+  setGpuApiToken(authResponse.sessionToken, gpuBuildUrl, userId, username, computeTier);
 
   const functions = createFunctionsManager(http);
 

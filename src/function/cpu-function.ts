@@ -94,7 +94,7 @@ function buildRequestBody(options: CPUFunctionOptions): Record<string, unknown> 
 /**
  * Create a CPU Function builder
  */
-function createCPUFunctionBuilder(options: CPUFunctionOptions, apiKey: string, baseUrl?: string): CPUFunctionBuilder {
+function createCPUFunctionBuilder(options: CPUFunctionOptions, apiToken: string, baseUrl?: string): CPUFunctionBuilder {
   validateOptions(options);
   const resolvedBaseUrl = baseUrl ?? DEFAULT_BASE_URL;
 
@@ -105,7 +105,7 @@ function createCPUFunctionBuilder(options: CPUFunctionOptions, apiKey: string, b
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiToken}`,
       },
       body: JSON.stringify(body),
     });
@@ -123,14 +123,14 @@ function createCPUFunctionBuilder(options: CPUFunctionOptions, apiKey: string, b
 }
 
 // Store API key globally for the factory function pattern
-let globalApiKey: string | null = null;
+let globalApiToken: string | null = null;
 let globalBaseUrl: string | undefined;
 
 /**
- * Set the API key for function deployment
+ * Set the API token for function deployment
  */
-export function setApiKey(apiKey: string, baseUrl?: string): void {
-  globalApiKey = apiKey;
+export function setApiToken(apiToken: string, baseUrl?: string): void {
+  globalApiToken = apiToken;
   globalBaseUrl = baseUrl;
 }
 
@@ -138,8 +138,8 @@ export function setApiKey(apiKey: string, baseUrl?: string): void {
  * Factory function to create a CPU Function builder
  */
 export function CPUFunction(options: CPUFunctionOptions): CPUFunctionBuilder {
-  if (!globalApiKey) {
-    throw new ValidationError('API key not set. Initialize Buildfunctions client first or call setApiKey()');
+  if (!globalApiToken) {
+    throw new ValidationError('API key not set. Initialize Buildfunctions client first or call setApiToken()');
   }
-  return createCPUFunctionBuilder(options, globalApiKey, globalBaseUrl);
+  return createCPUFunctionBuilder(options, globalApiToken, globalBaseUrl);
 }

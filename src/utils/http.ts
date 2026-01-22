@@ -6,7 +6,7 @@ import { BuildfunctionsError, AuthenticationError } from './errors.js';
 
 export interface HttpClientConfig {
   baseUrl: string;
-  apiKey: string;
+  apiToken: string;
   timeout?: number;
 }
 
@@ -27,12 +27,12 @@ export interface HttpClient {
 }
 
 export function createHttpClient(config: HttpClientConfig): HttpClient {
-  if (!config.apiKey) {
-    throw new AuthenticationError('API key is required');
+  if (!config.apiToken) {
+    throw new AuthenticationError('API token is required');
   }
 
   const baseUrl = config.baseUrl.replace(/\/$/, '');
-  let currentToken = config.apiKey;
+  let currentToken = config.apiToken;
   const timeout = config.timeout ?? 600000; // 10 minutes default for long-running builds
 
   const buildUrl = (path: string, params?: Record<string, string | number>): string => {

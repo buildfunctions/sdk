@@ -22,7 +22,7 @@ async function testGpuFunction() {
   try {
     // Step 1: Authenticate
     console.log('1. Authenticating...')
-    buildfunctions = await Buildfunctions({ apiKey: API_TOKEN })
+    buildfunctions = await Buildfunctions({ apiToken: API_TOKEN })
     console.log('   Authenticated as:', buildfunctions.user.username)
 
     // Step 2: Deploy GPU Function

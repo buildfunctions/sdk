@@ -105,14 +105,14 @@ async function fetchWithAuthDNS(endpoint: string): Promise<{ status: number; bod
 
 
 // Global configuration
-let globalApiKey: string | null = null;
+let globalApiToken: string | null = null;
 let globalBaseUrl: string | undefined;
 
 /**
- * Set the API key for sandbox operations
+ * Set the API token for sandbox operations
  */
-export function setCpuSandboxApiKey(apiKey: string, baseUrl?: string): void {
-  globalApiKey = apiKey;
+export function setCpuSandboxApiToken(apiToken: string, baseUrl?: string): void {
+  globalApiToken = apiToken;
   globalBaseUrl = baseUrl;
 }
 
@@ -145,7 +145,7 @@ function createCPUSandboxInstance(
   name: string,
   runtime: string,
   endpoint: string,
-  apiKey: string,
+  apiToken: string,
   baseUrl: string
 ): CPUSandboxInstance {
   let deleted = false;
@@ -219,7 +219,7 @@ function createCPUSandboxInstance(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiToken}`,
       },
       body: JSON.stringify({
         sandboxId: id,
@@ -243,7 +243,7 @@ function createCPUSandboxInstance(
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiToken}`,
       },
       body: JSON.stringify({
         sandboxId: id,
@@ -278,7 +278,7 @@ export const CPUSandbox = {
    * Create a new CPU sandbox
    */
   create: async (config: CPUSandboxConfig): Promise<CPUSandboxInstance> => {
-    if (!globalApiKey) {
+    if (!globalApiToken) {
       throw new ValidationError('API key not set. Initialize Buildfunctions client first.');
     }
 
@@ -321,7 +321,7 @@ export const CPUSandbox = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${globalApiKey}`,
+        Authorization: `Bearer ${globalApiToken}`,
       },
       body: JSON.stringify(requestBody),
       signal: controller.signal,
@@ -346,6 +346,6 @@ export const CPUSandbox = {
     const sandboxEndpoint = data.endpoint || `https://${name}.buildfunctions.app`;
     const sandboxRuntime = config.runtime ?? config.language;
 
-    return createCPUSandboxInstance(sandboxId, name, sandboxRuntime, sandboxEndpoint, globalApiKey, baseUrl);
+    return createCPUSandboxInstance(sandboxId, name, sandboxRuntime, sandboxEndpoint, globalApiToken, baseUrl);
   },
 };

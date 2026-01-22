@@ -140,7 +140,7 @@ function buildRequestBody(options: GPUFunctionOptions): Record<string, unknown> 
 
 function createGPUFunctionBuilder(
   options: GPUFunctionOptions,
-  _apiKey: string,
+  _apiToken: string,
   gpuBuildUrl?: string,
   userId?: string,
   username?: string,
@@ -261,14 +261,14 @@ function createGPUFunctionBuilder(
   return { deploy };
 }
 
-let globalApiKey: string | null = null;
+let globalApiToken: string | null = null;
 let globalGpuBuildUrl: string | undefined;
 let globalUserId: string | undefined;
 let globalUsername: string | undefined;
 let globalComputeTier: string | undefined;
 
-export function setGpuApiKey(apiKey: string, gpuBuildUrl?: string, userId?: string, username?: string, computeTier?: string): void {
-  globalApiKey = apiKey;
+export function setGpuApiToken(apiToken: string, gpuBuildUrl?: string, userId?: string, username?: string, computeTier?: string): void {
+  globalApiToken = apiToken;
   globalGpuBuildUrl = gpuBuildUrl;
   globalUserId = userId;
   globalUsername = username;
@@ -276,8 +276,8 @@ export function setGpuApiKey(apiKey: string, gpuBuildUrl?: string, userId?: stri
 }
 
 export function GPUFunction(options: GPUFunctionOptions): GPUFunctionBuilder {
-  if (!globalApiKey) {
+  if (!globalApiToken) {
     throw new ValidationError('API key not set. Initialize Buildfunctions client first.');
   }
-  return createGPUFunctionBuilder(options, globalApiKey, globalGpuBuildUrl, globalUserId, globalUsername, globalComputeTier);
+  return createGPUFunctionBuilder(options, globalApiToken, globalGpuBuildUrl, globalUserId, globalUsername, globalComputeTier);
 }
