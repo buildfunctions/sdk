@@ -116,7 +116,7 @@ function buildRequestBody(options: GPUFunctionOptions): Record<string, unknown> 
     gpu,
     memoryAllocated: config?.memory ? parseMemory(config.memory) : 4096,
     timeout: config?.timeout ?? 180,
-    cpuCores: options.cpuCores ?? 10,  // vCPUs for the GPU function VM (hotplugged at runtime)
+    cpuCores: options.vcpus ?? 10,
     envVariables: envVariables ? JSON.stringify(Object.entries(envVariables).map(([key, value]) => ({ key, value }))) : '[]',
     requirements: formatRequirements(dependencies),
     cronExpression: cronSchedule ?? '',

@@ -4,8 +4,8 @@
  */
 
 import 'dotenv/config'
-// import { Buildfunctions, GPUSandbox } from '../dist/index.js'
-import { Buildfunctions, GPUSandbox } from 'buildfunctions'
+import { Buildfunctions, GPUSandbox } from '../dist/index.js'
+// import { Buildfunctions, GPUSandbox } from 'buildfunctions'
 
 const API_TOKEN = process.env.BUILDFUNCTIONS_API_TOKEN
 

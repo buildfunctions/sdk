@@ -184,7 +184,7 @@ function buildRequestBody(config: GPUSandboxConfig, localModelInfo: LocalModelIn
     gpu,
     memoryAllocated: config.memory ? parseMemory(config.memory) : 10000,
     timeout: config.timeout ?? 300,
-    cpuCores: config.cpuCores ?? 10,  // vCPUs for the sandbox VM (hotplugged at runtime)
+    cpuCores: config.vcpus ?? 10,
     envVariables: JSON.stringify(config.envVariables ?? []),
     requirements,
     cronExpression: '',

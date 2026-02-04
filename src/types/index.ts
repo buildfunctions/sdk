@@ -51,8 +51,8 @@ export interface CPUFunctionOptions {
 }
 
 export interface GPUFunctionOptions extends CPUFunctionOptions {
-  gpu?: GPUType;  // Defaults to 'T4'
-  cpuCores?: number;  // Number of vCPUs for the GPU function VM (hotplugged at runtime, default 10, max 50)
+  gpu?: GPUType;
+  vcpus?: number;
   framework?: Framework;
   modelPath?: string;
   modelName?: string;
@@ -109,9 +109,9 @@ export interface CPUSandboxConfig {
 }
 
 export interface GPUSandboxConfig extends CPUSandboxConfig {
-  gpu?: GPUType;  // Defaults to 'T4'
-  cpuCores?: number;  // Number of vCPUs for the GPU sandbox VM (hotplugged at runtime, default 10, max 50)
-  code?: string;  // Inline code string or path to file (absolute, relative, or ~/path)
+  gpu?: GPUType;
+  vcpus?: number;
+  code?: string;
   model?: string | {
     name: string;
     path: string;
