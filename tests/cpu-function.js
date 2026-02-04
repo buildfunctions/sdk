@@ -1,11 +1,6 @@
-/**
- * Test CPU Function Deployment
- * Run: node tests/test-cpu-function.js
- */
-
 import 'dotenv/config'
-import { Buildfunctions } from '../dist/index.js'
-// import { Buildfunctions } from 'buildfunctions'
+// import { Buildfunctions, CPUFunction } from '../dist/index.js'
+import { Buildfunctions, CPUFunction } from 'buildfunctions'
 
 const API_TOKEN = process.env.BUILDFUNCTIONS_API_TOKEN
 
@@ -29,7 +24,7 @@ async function testCpuFunction() {
     // Step 2: Deploy CPU Function
     console.log('\n2. Deploying CPU Function...')
 
-    deployedFunction = await buildfunctions.functions.create({
+    deployedFunction = await CPUFunction.create({
       name: 'sdk-cpu-function-' + Date.now(),
       code: './cpu_function_code.py',
       language: 'python',

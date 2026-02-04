@@ -1,11 +1,6 @@
-/**
- * Test GPU Function Deployment
- * Run: node tests/test-gpu-function.js
- */
-
 import 'dotenv/config'
-import { Buildfunctions } from '../dist/index.js'
-// import { Buildfunctions } from 'buildfunctions'
+// import { Buildfunctions, GPUFunction } from '../dist/index.js'
+import { Buildfunctions, GPUFunction } from 'buildfunctions'
 
 const API_TOKEN = process.env.BUILDFUNCTIONS_API_TOKEN
 
@@ -29,7 +24,7 @@ async function testGpuFunction() {
     // Step 2: Deploy GPU Function
     console.log('\n2. Deploying GPU Function...')
 
-    deployedFunction = await buildfunctions.functions.create({
+    deployedFunction = await GPUFunction.create({
       name: 'sdk-gpu-function-' + Date.now(),
       code: '/path/to/code/gpu_function_code.py',
       language: 'python',

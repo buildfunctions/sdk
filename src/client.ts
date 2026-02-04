@@ -10,6 +10,7 @@ import { resolveCode, getCallerFile } from './lib/resolve-code.js';
 import { dirname } from 'path';
 import { setCpuSandboxApiToken } from './sandbox/cpu-sandbox.js';
 import { setGpuSandboxApiToken } from './sandbox/gpu-sandbox.js';
+import { setApiToken } from './function/cpu-function.js';
 import { setGpuApiToken, GPUFunction } from './function/gpu-function.js';
 import type {
   BuildfunctionsConfig,
@@ -128,7 +129,7 @@ function createFunctionsManager(http: HttpClient): FunctionsManager {
     const runtime = (options.runtime ?? getDefaultRuntime(options.language)) as typeof options.runtime;
 
     if (isGpu) {
-      const gpuBuilder = GPUFunction({
+      const deployed = await GPUFunction.create({
         name: options.name,
         code: resolvedCode,
         language: options.language,
@@ -148,7 +149,6 @@ function createFunctionsManager(http: HttpClient): FunctionsManager {
         modelPath: options.modelPath,
       });
 
-      const deployed = await gpuBuilder.deploy();
       if (!deployed) {
         throw new Error('GPU Function deployment failed');
       }
@@ -246,6 +246,7 @@ export async function Buildfunctions(config: BuildfunctionsConfig): Promise<Buil
   const username = authResponse.user.username || undefined;
   const computeTier = authResponse.user.computeTier || undefined;
 
+  setApiToken(authResponse.sessionToken, baseUrl);
   setCpuSandboxApiToken(authResponse.sessionToken, baseUrl);
   setGpuSandboxApiToken(authResponse.sessionToken, gpuBuildUrl, userId, username, computeTier, baseUrl);
   setGpuApiToken(authResponse.sessionToken, gpuBuildUrl, userId, username, computeTier, baseUrl);

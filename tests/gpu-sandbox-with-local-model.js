@@ -1,11 +1,6 @@
-/**
- * Test GPU Sandbox with Local Model
- * Run: node tests/test-gpu-sandbox-local-model.js
- */
-
 import 'dotenv/config'
-import { Buildfunctions, GPUSandbox } from '../dist/index.js'
-// import { Buildfunctions, GPUSandbox } from 'buildfunctions'
+// import { Buildfunctions, GPUSandbox } from '../dist/index.js'
+import { Buildfunctions, GPUSandbox } from 'buildfunctions'
 
 const API_TOKEN = process.env.BUILDFUNCTIONS_API_TOKEN
 
@@ -48,7 +43,7 @@ async function testGpuSandboxWithModel() {
     // Step 3: Run GPU Sandbox
     console.log('\n3. Running GPU Sandbox...')
     const result = await sandbox.run()
-    console.log('   Response:', JSON.stringify(result, null, 2))
+    console.log('   Result:', JSON.stringify(result, null, 2))
 
     // Step 4: Clean up
     console.log('\n4. Deleting GPU Sandbox...')

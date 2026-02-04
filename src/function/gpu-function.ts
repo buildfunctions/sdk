@@ -289,13 +289,18 @@ export function setGpuApiToken(apiToken: string, gpuBuildUrl?: string, userId?: 
   globalBaseUrl = baseUrl;
 }
 
-export function GPUFunction(options: GPUFunctionOptions): GPUFunctionBuilder {
-  // Capture caller file FIRST before any async operations change the call stack
-  const callerFile = getCallerFile();
-  const callerDir = callerFile ? dirname(callerFile) : undefined;
+/**
+ * GPU Function factory
+ */
+export const GPUFunction = {
+  create: async (options: GPUFunctionOptions): Promise<DeployedFunction | null> => {
+    const callerFile = getCallerFile();
+    const callerDir = callerFile ? dirname(callerFile) : undefined;
 
-  if (!globalApiToken) {
-    throw new ValidationError('API key not set. Initialize Buildfunctions client first.');
-  }
-  return createGPUFunctionBuilder(options, globalApiToken, globalGpuBuildUrl, globalUserId, globalUsername, globalComputeTier, callerDir, globalBaseUrl);
-}
+    if (!globalApiToken) {
+      throw new ValidationError('API key not set. Initialize Buildfunctions client first.');
+    }
+    const builder = createGPUFunctionBuilder(options, globalApiToken, globalGpuBuildUrl, globalUserId, globalUsername, globalComputeTier, callerDir, globalBaseUrl);
+    return builder.deploy();
+  },
+};

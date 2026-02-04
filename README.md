@@ -45,32 +45,91 @@ npm install buildfunctions
 
 Get your API token at [buildfunctions.com/settings](https://www.buildfunctions.com/settings)
 
-### 2. Authenticate
+### 2. CPU Function
+
+```javascript
+import { Buildfunctions, CPUFunction } from 'buildfunctions'
+
+const buildfunctions = await Buildfunctions({ apiToken: process.env.BUILDFUNCTIONS_API_TOKEN })
+
+const deployedFunction = await CPUFunction.create({
+  name: 'my-cpu-function',
+  code: './cpu_function_code.py',
+  language: 'python',
+  memory: 128,
+  timeout: 30
+})
+
+console.log('Endpoint:', deployedFunction.endpoint)
+
+await deployedFunction.delete()
+```
+
+### 3. CPU Sandbox
+
+```javascript
+import { Buildfunctions, CPUSandbox } from 'buildfunctions'
+
+const buildfunctions = await Buildfunctions({ apiToken: process.env.BUILDFUNCTIONS_API_TOKEN })
+
+const sandbox = await CPUSandbox.create({
+  name: 'my-cpu-sandbox',
+  language: 'python',
+  code: '/path/to/code/cpu_sandbox_code.py',
+  memory: 128,
+  timeout: 30,
+})
+
+const result = await sandbox.run()
+console.log('Result:', result)
+
+await sandbox.delete()
+```
+
+### 4. GPU Function
+
+```javascript
+import { Buildfunctions, GPUFunction } from 'buildfunctions'
+
+const buildfunctions = await Buildfunctions({ apiToken: process.env.BUILDFUNCTIONS_API_TOKEN })
+
+const deployedFunction = await GPUFunction.create({
+  name: 'my-gpu-function',
+  code: '/path/to/code/gpu_function_code.py',
+  language: 'python',
+  gpu: 'T4',
+  vcpus: 30,
+  memory: "50000MB",
+  timeout: 300,
+  requirements: ['transformers==4.47.1', 'torch', 'accelerate'],
+})
+
+console.log('Endpoint:', deployedFunction.endpoint)
+
+await deployedFunction.delete()
+```
+
+### 5. GPU Sandbox with Local Model
 
 ```javascript
 import { Buildfunctions, GPUSandbox } from 'buildfunctions'
 
 const buildfunctions = await Buildfunctions({ apiToken: process.env.BUILDFUNCTIONS_API_TOKEN })
-```
 
-### 3. Create a GPU Sandbox
-
-```javascript
-// Create a GPU Sandbox with Python and PyTorch
 const sandbox = await GPUSandbox.create({
   name: 'my-gpu-sandbox',
   language: 'python',
-  code: './inference.py',
   memory: 10000,
   timeout: 300,
-  model: '/path/to/local/model',
-  requirements: 'torch'
+  vcpus: 6,
+  code: './gpu_sandbox_code.py',
+  model: '/path/to/models/Qwen/Qwen3-8B',
+  requirements: "torch"
 })
 
-// Run the sandbox
 const result = await sandbox.run()
+console.log('Result:', result)
 
-// Clean up
 await sandbox.delete()
 ```
 

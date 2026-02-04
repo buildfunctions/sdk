@@ -11,8 +11,9 @@ import { dirname } from 'path';
 const DEFAULT_BASE_URL = 'https://www.buildfunctions.com';
 
 interface DeployResponse {
-  success: boolean;
-  site?: DeployedFunction;
+  siteId?: string;
+  endpoint?: string;
+  sslCertificateEndpoint?: string;
   error?: string;
   code?: string;
 }
@@ -100,13 +101,14 @@ function createCPUFunctionBuilder(options: CPUFunctionOptions, apiToken: string,
   const resolvedBaseUrl = baseUrl ?? DEFAULT_BASE_URL;
 
   const deploy = async (): Promise<DeployedFunction | null> => {
-    // Resolve code (inline string or file path)
     const resolvedCode = await resolveCode(options.code, callerDir);
     const resolvedOptions = { ...options, code: resolvedCode };
     validateOptions(resolvedOptions);
     const body = buildRequestBody(resolvedOptions);
+    const runtime = options.runtime ?? getDefaultRuntime(options.language);
+    const name = options.name.toLowerCase();
 
-    const response = await fetch(`${resolvedBaseUrl}/api/functions/build`, {
+    const response = await fetch(`${resolvedBaseUrl}/api/sdk/functions/build`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -115,13 +117,39 @@ function createCPUFunctionBuilder(options: CPUFunctionOptions, apiToken: string,
       body: JSON.stringify(body),
     });
 
-    const data = (await response.json()) as DeployResponse;
-
-    if (!response.ok || !data.success) {
+    if (!response.ok) {
       return null;
     }
 
-    return data.site ?? null;
+    const data = (await response.json()) as DeployResponse;
+
+    const deleteFn = async () => {
+      await fetch(`${resolvedBaseUrl}/api/sdk/functions/build`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiToken}`,
+        },
+        body: JSON.stringify({ siteId: data.siteId }),
+      });
+    };
+
+    return {
+      id: data.siteId || '',
+      name,
+      subdomain: name,
+      endpoint: data.endpoint || '',
+      lambdaUrl: data.sslCertificateEndpoint || '',
+      language: options.language,
+      runtime,
+      lambdaMemoryAllocated: options.config?.memory ? parseMemory(options.config.memory) : 1024,
+      timeoutSeconds: options.config?.timeout ?? 10,
+      isGPUF: false,
+      framework: undefined,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      delete: deleteFn,
+    };
   };
 
   return { deploy };
@@ -140,15 +168,17 @@ export function setApiToken(apiToken: string, baseUrl?: string): void {
 }
 
 /**
- * Factory function to create a CPU Function builder
+ * CPU Function factory
  */
-export function CPUFunction(options: CPUFunctionOptions): CPUFunctionBuilder {
-  // Capture caller file FIRST before any async operations change the call stack
-  const callerFile = getCallerFile();
-  const callerDir = callerFile ? dirname(callerFile) : undefined;
+export const CPUFunction = {
+  create: async (options: CPUFunctionOptions): Promise<DeployedFunction | null> => {
+    const callerFile = getCallerFile();
+    const callerDir = callerFile ? dirname(callerFile) : undefined;
 
-  if (!globalApiToken) {
-    throw new ValidationError('API key not set. Initialize Buildfunctions client first or call setApiToken()');
-  }
-  return createCPUFunctionBuilder(options, globalApiToken, globalBaseUrl, callerDir);
-}
+    if (!globalApiToken) {
+      throw new ValidationError('API key not set. Initialize Buildfunctions client first.');
+    }
+    const builder = createCPUFunctionBuilder(options, globalApiToken, globalBaseUrl, callerDir);
+    return builder.deploy();
+  },
+};
