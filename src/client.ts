@@ -2,10 +2,12 @@
  * Buildfunctions SDK Client
  */
 
-import { HttpClient, createHttpClient } from './utils/http.js';
-import { NotFoundError } from './utils/errors.js';
-import { parseMemory } from './utils/memory.js';
-import { detectFramework } from './utils/framework.js';
+import { HttpClient, createHttpClient } from './lib/http.js';
+import { NotFoundError } from './lib/errors.js';
+import { parseMemory } from './lib/memory.js';
+import { detectFramework } from './lib/framework.js';
+import { resolveCode, getCallerFile } from './lib/resolve-code.js';
+import { dirname } from 'path';
 import { setCpuSandboxApiToken } from './sandbox/cpu-sandbox.js';
 import { setGpuSandboxApiToken } from './sandbox/gpu-sandbox.js';
 import { setGpuApiToken, GPUFunction } from './function/gpu-function.js';
@@ -112,6 +114,13 @@ function createFunctionsManager(http: HttpClient): FunctionsManager {
   };
 
   const create = async (options: CreateFunctionOptions): Promise<DeployedFunction> => {
+    // Get the caller's file location to resolve relative paths correctly
+    const callerFile = getCallerFile();
+    const callerDir = callerFile ? dirname(callerFile) : undefined;
+
+    // Resolve code (inline string or file path) relative to the caller's location
+    const resolvedCode = await resolveCode(options.code, callerDir);
+
     const fileExt = getFileExtension(options.language);
     const name = options.name.toLowerCase();
     // Detect Function by explicit processorType OR by presence of gpu option
@@ -121,7 +130,7 @@ function createFunctionsManager(http: HttpClient): FunctionsManager {
     if (isGpu) {
       const gpuBuilder = GPUFunction({
         name: options.name,
-        code: options.code,
+        code: resolvedCode,
         language: options.language,
         runtime,
         gpu: options.gpu ?? 'T4',
@@ -150,8 +159,8 @@ function createFunctionsManager(http: HttpClient): FunctionsManager {
     const body: Record<string, unknown> = {
       name,
       fileExt,
-      sourceWith: options.code,
-      sourceWithout: options.code,
+      sourceWith: resolvedCode,
+      sourceWithout: resolvedCode,
       language: options.language,
       runtime,
       memoryAllocated: options.memory ? parseMemory(options.memory) : 128,
@@ -239,7 +248,7 @@ export async function Buildfunctions(config: BuildfunctionsConfig): Promise<Buil
 
   setCpuSandboxApiToken(authResponse.sessionToken, baseUrl);
   setGpuSandboxApiToken(authResponse.sessionToken, gpuBuildUrl, userId, username, computeTier, baseUrl);
-  setGpuApiToken(authResponse.sessionToken, gpuBuildUrl, userId, username, computeTier);
+  setGpuApiToken(authResponse.sessionToken, gpuBuildUrl, userId, username, computeTier, baseUrl);
 
   const functions = createFunctionsManager(http);
 

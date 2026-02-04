@@ -50,38 +50,28 @@ Get your API token at [buildfunctions.com/settings](https://www.buildfunctions.c
 ```javascript
 import { Buildfunctions, GPUSandbox } from 'buildfunctions'
 
-const apiToken = process.env.BUILDFUNCTIONS_API_KEY
-
-// Initialize
-const buildfunctions = new Buildfunctions({ apiToken })
-if (!buildfunctions) {
-  throw new Error('Failed to initialize Buildfunctions SDK')
-}
+const buildfunctions = await Buildfunctions({ apiToken: process.env.BUILDFUNCTIONS_API_TOKEN })
 ```
 
 ### 3. Create a GPU Sandbox
 
 ```javascript
-...
-// Create a GPU Sandbox with Python and PyTorch 
+// Create a GPU Sandbox with Python and PyTorch
 const sandbox = await GPUSandbox.create({
-  name: 'secure-agent-action',
-  memory: "64GB",
-  vcpu: 32,
-  timeout: 1200,
+  name: 'my-gpu-sandbox',
   language: 'python',
-  requirements: ['transformers', 'torch', 'accelerate'],
-  model: './Qwen/Qwen3-8B', // model path (local or remote)
+  code: './inference.py',
+  memory: 10000,
+  timeout: 300,
+  model: '/path/to/local/model',
+  requirements: 'torch'
 })
 
-// Upload inference script from path (or just inline code)
-await sandbox.upload({ filePath: 'inference_script.py' })
+// Run the sandbox
+const result = await sandbox.run()
 
-// Run script in a hardware-isolated virtual machine with full GPU access
-const result = await sandbox.run(
-  `python inference_script.py "${prompt}"`
-)
-...
+// Clean up
+await sandbox.delete()
 ```
 
 The SDK is currently in beta.

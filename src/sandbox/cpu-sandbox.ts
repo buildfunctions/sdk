@@ -3,8 +3,10 @@
  */
 
 import type { CPUSandboxConfig, CPUSandboxInstance, RunResult, UploadOptions } from '../types/index.js';
-import { ValidationError, BuildfunctionsError } from '../utils/errors.js';
-import { parseMemory } from '../utils/memory.js';
+import { ValidationError, BuildfunctionsError } from '../lib/errors.js';
+import { parseMemory } from '../lib/memory.js';
+import { resolveCode, getCallerFile } from '../lib/resolve-code.js';
+import { dirname } from 'path';
 import { readFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import dns from 'dns';
@@ -80,10 +82,9 @@ async function waitForEndpoint(endpoint: string, maxAttempts = 60, delayMs = 500
       // Step 2: Connect directly to IP with proper Host/SNI headers
       const res = await httpsGetWithIP(ip, hostname, path);
       if (res.status >= 200 && res.status < 500) return;
-    } catch (err) {
-      const error = err as Error & { code?: string };
+    } catch {
       if (attempt === 1 || attempt % 10 === 0) {
-        console.log(`   Waiting for endpoint... (attempt ${attempt}/${maxAttempts}) ${error.code || error.message}`);
+        console.log(`   Waiting... (attempt ${attempt}/${maxAttempts})`);
       }
     }
     await new Promise(r => setTimeout(r, delayMs));
@@ -166,32 +167,21 @@ function createCPUSandboxInstance(
       throw new BuildfunctionsError('Empty response from sandbox', 'UNKNOWN_ERROR', response.status);
     }
 
+    if (response.status < 200 || response.status >= 300) {
+      throw new BuildfunctionsError(`Execution failed: ${responseText}`, 'UNKNOWN_ERROR', response.status);
+    }
+
+    // Try to parse as JSON, otherwise return raw text
     let data: unknown;
     try {
       data = JSON.parse(responseText);
     } catch {
-      // Response is plain text
-      return {
-        stdout: responseText,
-        stderr: '',
-        text: responseText,
-        results: null,
-        exit_code: 0,
-      };
+      data = responseText;
     }
 
-    if (response.status < 200 || response.status >= 300) {
-      const errorData = data as { error?: string };
-      throw new BuildfunctionsError(`Execution failed: ${errorData.error || 'Unknown error'}`, 'UNKNOWN_ERROR', response.status);
-    }
-
-    // Response is already the unwrapped result from the handler
     return {
-      stdout: responseText,
-      stderr: '',
-      text: responseText,
-      results: data,
-      exit_code: 0,
+      response: data,
+      status: response.status,
     };
   };
 
@@ -278,6 +268,10 @@ export const CPUSandbox = {
    * Create a new CPU sandbox
    */
   create: async (config: CPUSandboxConfig): Promise<CPUSandboxInstance> => {
+    // Capture caller file FIRST before any async operations change the call stack
+    const callerFile = getCallerFile();
+    const callerDir = callerFile ? dirname(callerFile) : undefined;
+
     if (!globalApiToken) {
       throw new ValidationError('API key not set. Initialize Buildfunctions client first.');
     }
@@ -293,15 +287,18 @@ export const CPUSandbox = {
     const name = config.name.toLowerCase();
     const fileExt = config.language === 'python' ? '.py' : config.language === 'javascript' ? '.js' : '.py';
 
+    // Resolve code (inline string or file path)
+    const resolvedCode = config.code ? await resolveCode(config.code, callerDir) : '';
+
     const requestBody = {
       // Required by sandbox/create endpoint
       type: 'cpu',
       // Same fields as CPU function
       name,
       fileExt,
-      code: config.code ?? '',
-      sourceWith: config.code ?? '',
-      sourceWithout: config.code ?? '',
+      code: resolvedCode,
+      sourceWith: resolvedCode,
+      sourceWithout: resolvedCode,
       language: config.language,
       runtime: config.runtime ?? config.language,
       memoryAllocated: config.memory ? parseMemory(config.memory) : 128,

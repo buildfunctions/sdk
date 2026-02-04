@@ -76,7 +76,7 @@ export {
   NotFoundError,
   ValidationError,
   CapacityError,
-} from './utils/errors.js';
+} from './lib/errors.js';
 
 // Re-export client
 export { Buildfunctions, createClient } from './client.js';
@@ -97,7 +97,7 @@ export function init(
   computeTier?: string
 ): void {
   setApiToken(apiToken, baseUrl);
-  setGpuApiToken(apiToken, gpuBuildUrl, userId, username, computeTier);
+  setGpuApiToken(apiToken, gpuBuildUrl, userId, username, computeTier, baseUrl);
   setCpuSandboxApiToken(apiToken, baseUrl);
   setGpuSandboxApiToken(apiToken, gpuBuildUrl, userId, username, computeTier, baseUrl);
 }

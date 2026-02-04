@@ -4,7 +4,8 @@
  */
 
 import 'dotenv/config'
-import { Buildfunctions, CPUSandbox } from '../dist/index.js'
+// import { Buildfunctions, CPUSandbox } from '../dist/index.js' 
+import { Buildfunctions, CPUSandbox } from 'buildfunctions'
 
 const API_TOKEN = process.env.BUILDFUNCTIONS_API_TOKEN
 
@@ -27,21 +28,10 @@ async function testCpuSandbox() {
     // Step 2: Create CPU Sandbox with handler code
     console.log('\n2. Creating CPU Sandbox...')
 
-    const handlerCode = `import sys
-
-def handler(event, context):
-    response = {
-        'statusCode': 200,
-        'headers': {'Content-Type': 'application/json'},
-        'body': f'{{"message": "Hello from CPU Sandbox!", "python_version": "{sys.version}"}}'
-    }
-    return response
-`
-
     sandbox = await CPUSandbox.create({
       name: 'sdk-cpu-sandbox-' + Date.now(),
       language: 'python',
-      code: handlerCode,
+      code: '/path/to/code/cpu_sandbox_code.py',
       memory: 128,
       timeout: 30,
     })
@@ -54,7 +44,7 @@ def handler(event, context):
     // Step 3: Run CPU Sandbox
     console.log('\n3. Running CPU Sandbox...')
     const result = await sandbox.run()
-    console.log('   Response:', JSON.stringify(result, null, 2))
+    console.log('   Result:', JSON.stringify(result, null, 2))
 
     // Step 4: Clean up
     console.log('\n4. Deleting CPU Sandbox...')

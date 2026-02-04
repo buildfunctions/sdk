@@ -4,7 +4,8 @@
  */
 
 import 'dotenv/config'
-import { Buildfunctions } from '../dist/index.js'
+// import { Buildfunctions } from '../dist/index.js'
+import { Buildfunctions } from 'buildfunctions'
 
 const API_TOKEN = process.env.BUILDFUNCTIONS_API_TOKEN
 
@@ -27,21 +28,10 @@ async function testCpuFunction() {
 
     // Step 2: Deploy CPU Function
     console.log('\n2. Deploying CPU Function...')
-    const functionCode = `
-def handler(event, context):
-
-    response = {
-        'statusCode': 200,
-        'headers': {'Content-Type': 'text/plain'},
-        'body': f'Hello, world! A Python function built to run on Buildfunctions!'
-    }
-
-    return response
-`
 
     deployedFunction = await buildfunctions.functions.create({
       name: 'sdk-cpu-function-' + Date.now(),
-      code: functionCode,
+      code: './cpu_function_code.py',
       language: 'python',
       memory: 128,
       timeout: 30
@@ -63,12 +53,26 @@ def handler(event, context):
       console.log('   CPU Function not found in list (may take a moment)')
     }
 
-    // Step 4: Clean up
-    // console.log('\n5. Deleting CPU Function...')
-    // await deployedFunction.delete()
-    // console.log('   CPU Function deleted')
+    // Step 4: Wait and call the endpoint
+    console.log('\n4. Waiting 10 seconds before calling endpoint...')
+    await new Promise(resolve => setTimeout(resolve, 10000))
 
-    // console.log('\nCPU Function test completed!')
+    console.log('   Calling endpoint:', deployedFunction.endpoint)
+    const response = await fetch(deployedFunction.endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ test: true })
+    })
+    const responseData = await response.text()
+    console.log('   Status:', response.status)
+    console.log('   Response:', responseData)
+
+    // Step 5: Clean up
+    console.log('\n5. Deleting CPU Function...')
+    await deployedFunction.delete()
+    console.log('   CPU Function deleted')
+
+    console.log('\nCPU Function test completed!')
 
   } catch (error) {
     console.error('\nTest failed:', error.message)

@@ -37,14 +37,13 @@ export type Memory = '128Mi' | '256Mi' | '512Mi' | '1Gi' | '2Gi' | '4Gi' | '8Gi'
 export interface FunctionConfig {
   memory?: string | number;  // "2GB", "1024MB", or number in MB
   timeout?: number;
-  cpuCores?: number;
 }
 
 export interface CPUFunctionOptions {
   name: string;
   language: Language;
   runtime?: Runtime;  // Defaults to language (except JavaScript which requires explicit)
-  code: string;
+  code: string;  // Inline code string or path to file (absolute, relative, or ~/path)
   config?: FunctionConfig;
   envVariables?: Record<string, string>;
   dependencies?: string;
@@ -53,6 +52,7 @@ export interface CPUFunctionOptions {
 
 export interface GPUFunctionOptions extends CPUFunctionOptions {
   gpu?: GPUType;  // Defaults to 'T4'
+  cpuCores?: number;  // Number of vCPUs for the GPU function VM (hotplugged at runtime, default 10, max 50)
   framework?: Framework;
   modelPath?: string;
   modelName?: string;
@@ -61,7 +61,7 @@ export interface GPUFunctionOptions extends CPUFunctionOptions {
 // Create Function Options (for SDK deploy)
 export interface CreateFunctionOptions {
   name: string;
-  code: string;
+  code: string;  // Inline code string or path to file (absolute, relative, or ~/path)
   language: Language;
   runtime?: Runtime;  // Defaults to language (except JavaScript which requires explicit)
   memory?: string | number;  // "2GB", "1024MB", or number in MB
@@ -101,7 +101,7 @@ export interface CPUSandboxConfig {
   name: string;
   language: Language;
   runtime?: Runtime;
-  code?: string;  // Handler code to deploy
+  code?: string;  // Inline code string or path to file (absolute, relative, or ~/path)
   memory?: string | number;  // "2GB", "1024MB", or number in MB
   timeout?: number;
   envVariables?: Array<{ key: string; value: string }>;
@@ -110,7 +110,8 @@ export interface CPUSandboxConfig {
 
 export interface GPUSandboxConfig extends CPUSandboxConfig {
   gpu?: GPUType;  // Defaults to 'T4'
-  code?: string;  // Handler code to deploy (same pattern as GPU functions)
+  cpuCores?: number;  // Number of vCPUs for the GPU sandbox VM (hotplugged at runtime, default 10, max 50)
+  code?: string;  // Inline code string or path to file (absolute, relative, or ~/path)
   model?: string | {
     name: string;
     path: string;
@@ -119,11 +120,8 @@ export interface GPUSandboxConfig extends CPUSandboxConfig {
 
 // Sandbox Run Result
 export interface RunResult {
-  stdout: string;
-  stderr: string;
-  text: string;
-  results: unknown;
-  exit_code: number;
+  response: unknown;  // The response (parsed JSON object, or raw string if not JSON)
+  status: number;     // HTTP status code
 }
 
 // Upload Options

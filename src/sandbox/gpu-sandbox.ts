@@ -4,13 +4,15 @@
 
 import https from 'https';
 import type { GPUSandboxConfig, GPUSandboxInstance, RunResult, UploadOptions, GPUType } from '../types/index.js';
-import { ValidationError, BuildfunctionsError } from '../utils/errors.js';
-import { parseMemory } from '../utils/memory.js';
-import { detectFramework } from '../utils/framework.js';
+import { ValidationError, BuildfunctionsError } from '../lib/errors.js';
+import { parseMemory } from '../lib/memory.js';
+import { detectFramework } from '../lib/framework.js';
+import { resolveCode, getCallerFile } from '../lib/resolve-code.js';
+import { dirname } from 'path';
 import { readFile } from 'fs/promises';
 import { existsSync, statSync } from 'fs';
 import { basename } from 'path';
-import { getFilesInDirectory, uploadModelFiles } from '../utils/uploader.js';
+import { getFilesInDirectory, uploadModelFiles } from '../lib/uploader.js';
 
 const DEFAULT_GPU_BUILD_URL = 'https://prod-gpu-build.buildfunctions.link';
 const DEFAULT_BASE_URL = 'https://www.buildfunctions.com';
@@ -110,7 +112,7 @@ function sanitizeModelName(name: string): string {
     .replace(/-+/g, '-');
 }
 
-import type { FileMetadata } from '../utils/uploader.js';
+import type { FileMetadata } from '../lib/uploader.js';
 
 interface LocalModelInfo {
   files: FileMetadata[];
@@ -182,7 +184,7 @@ function buildRequestBody(config: GPUSandboxConfig, localModelInfo: LocalModelIn
     gpu,
     memoryAllocated: config.memory ? parseMemory(config.memory) : 10000,
     timeout: config.timeout ?? 300,
-    cpuCores: 2,
+    cpuCores: config.cpuCores ?? 10,  // vCPUs for the sandbox VM (hotplugged at runtime)
     envVariables: JSON.stringify(config.envVariables ?? []),
     requirements,
     cronExpression: '',
@@ -208,7 +210,7 @@ function buildRequestBody(config: GPUSandboxConfig, localModelInfo: LocalModelIn
     } : {
       currentModelName: null,
       isCreatingNewModel: true,
-      gpufProjectTitleState: 'test', // todo: need to update
+      gpufProjectTitleState: 'test',
       useEmptyFolder: true,
     },
     // File metadata for build server
@@ -225,7 +227,6 @@ function createGPUSandboxInstance(
   gpu: GPUType,
   endpoint: string,
   apiToken: string,
-  gpuBuildUrl: string,
   baseUrl: string
 ): GPUSandboxInstance {
   let deleted = false;
@@ -248,30 +249,21 @@ function createGPUSandboxInstance(
       throw new BuildfunctionsError('Empty response from sandbox', 'UNKNOWN_ERROR', response.status);
     }
 
+    if (!response.ok) {
+      throw new BuildfunctionsError(`Execution failed: ${responseText}`, 'UNKNOWN_ERROR', response.status);
+    }
+
+    // Try to parse as JSON, otherwise return raw text
     let data: unknown;
     try {
       data = JSON.parse(responseText);
     } catch {
-      return {
-        stdout: responseText,
-        stderr: '',
-        text: responseText,
-        results: null,
-        exit_code: 0,
-      };
-    }
-
-    if (!response.ok) {
-      const errorData = data as { error?: string };
-      throw new BuildfunctionsError(`Execution failed: ${errorData.error || 'Unknown error'}`, 'UNKNOWN_ERROR', response.status);
+      data = responseText;
     }
 
     return {
-      stdout: responseText,
-      stderr: '',
-      text: responseText,
-      results: data,
-      exit_code: 0,
+      response: data,
+      status: response.status,
     };
   };
 
@@ -317,16 +309,23 @@ function createGPUSandboxInstance(
       return;
     }
 
-    await fetch(`${gpuBuildUrl}/delete`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    // Use the same endpoint as CPU sandbox - buildfunctions web app handles the delete
+    // This ensures proper HOST cleanup for occupied VMs
+    const response = await fetch(`${baseUrl}/api/sdk/sandbox/delete`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiToken}`,
+      },
       body: JSON.stringify({
-        siteId: id,
-        sandboxType: 'gpu',
-        userId: globalUserId,
-        username: globalUsername,
+        sandboxId: id,
+        type: 'gpu',
       }),
     });
+
+    if (!response.ok) {
+      throw new BuildfunctionsError('Delete failed', 'UNKNOWN_ERROR', response.status);
+    }
 
     deleted = true;
   };
@@ -349,6 +348,10 @@ function createGPUSandboxInstance(
  */
 export const GPUSandbox = {
   create: async (config: GPUSandboxConfig): Promise<GPUSandboxInstance> => {
+    // Capture caller file FIRST before any async operations change the call stack
+    const callerFile = getCallerFile();
+    const callerDir = callerFile ? dirname(callerFile) : undefined;
+
     if (!globalApiToken) {
       throw new ValidationError('API key not set. Initialize Buildfunctions client first.');
     }
@@ -372,8 +375,12 @@ export const GPUSandbox = {
       console.log('   Found', localModelInfo.files.length, 'files to upload');
     }
 
+    // Resolve code (inline string or file path)
+    const resolvedCode = config.code ? await resolveCode(config.code, callerDir) : '';
+    const resolvedConfig = { ...config, code: resolvedCode };
+
     // Build request body (same structure as frontend ModelsList.jsx)
-    const requestBody = buildRequestBody(config, localModelInfo);
+    const requestBody = buildRequestBody(resolvedConfig, localModelInfo);
 
     const body = {
       ...requestBody,
@@ -450,7 +457,6 @@ export const GPUSandbox = {
               config.gpu ?? 'T4',
               sandboxEndpoint,
               globalApiToken!,
-              gpuBuildUrl,
               baseUrl
             ));
           });

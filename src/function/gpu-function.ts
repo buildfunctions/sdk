@@ -4,9 +4,11 @@
 
 import https from 'https';
 import type { GPUFunctionOptions, DeployedFunction } from '../types/index.js';
-import { ValidationError } from '../utils/errors.js';
-import { parseMemory } from '../utils/memory.js';
-import { detectFramework } from '../utils/framework.js';
+import { ValidationError } from '../lib/errors.js';
+import { parseMemory } from '../lib/memory.js';
+import { detectFramework } from '../lib/framework.js';
+import { resolveCode, getCallerFile } from '../lib/resolve-code.js';
+import { dirname } from 'path';
 
 const DEFAULT_GPU_BUILD_URL = 'https://prod-gpu-build.buildfunctions.link';
 
@@ -114,7 +116,7 @@ function buildRequestBody(options: GPUFunctionOptions): Record<string, unknown> 
     gpu,
     memoryAllocated: config?.memory ? parseMemory(config.memory) : 4096,
     timeout: config?.timeout ?? 180,
-    cpuCores: config?.cpuCores ?? 2,
+    cpuCores: options.cpuCores ?? 10,  // vCPUs for the GPU function VM (hotplugged at runtime)
     envVariables: envVariables ? JSON.stringify(Object.entries(envVariables).map(([key, value]) => ({ key, value }))) : '[]',
     requirements: formatRequirements(dependencies),
     cronExpression: cronSchedule ?? '',
@@ -132,7 +134,7 @@ function buildRequestBody(options: GPUFunctionOptions): Record<string, unknown> 
     selectedModel: {
       currentModelName: null,
       isCreatingNewModel: true,
-      gpufProjectTitleState: 'test', // todo: need to update
+      gpufProjectTitleState: 'test',
       useEmptyFolder: true,
     },
   };
@@ -140,21 +142,28 @@ function buildRequestBody(options: GPUFunctionOptions): Record<string, unknown> 
 
 function createGPUFunctionBuilder(
   options: GPUFunctionOptions,
-  _apiToken: string,
+  apiToken: string,
   gpuBuildUrl?: string,
   userId?: string,
   username?: string,
-  computeTier?: string
+  computeTier?: string,
+  callerDir?: string,
+  baseUrl?: string
 ): GPUFunctionBuilder {
-  validateOptions(options);
   const resolvedGpuBuildUrl = gpuBuildUrl ?? DEFAULT_GPU_BUILD_URL;
+  const resolvedBaseUrl = baseUrl ?? 'https://www.buildfunctions.com';
 
   const deploy = async (): Promise<DeployedFunction | null> => {
+    // Resolve code (inline string or file path)
+    const resolvedCode = await resolveCode(options.code, callerDir);
+    const resolvedOptions = { ...options, code: resolvedCode };
+    validateOptions(resolvedOptions);
+
     // Compute runtime for use in resolved function
-    const resolvedRuntime = options.runtime ?? getDefaultRuntime(options.language);
+    const resolvedRuntime = resolvedOptions.runtime ?? getDefaultRuntime(resolvedOptions.language);
 
     const body = {
-      ...buildRequestBody(options),
+      ...buildRequestBody(resolvedOptions),
       userId,
       username,
       computeTier,
@@ -221,10 +230,13 @@ function createGPUFunctionBuilder(
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
               delete: async () => {
-                await fetch(`${resolvedGpuBuildUrl}/delete`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ siteId, userId, username }),
+                await fetch(`${resolvedBaseUrl}/api/sdk/function/delete`, {
+                  method: 'DELETE',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${apiToken}`,
+                  },
+                  body: JSON.stringify({ siteId }),
                 });
               },
             });
@@ -266,18 +278,24 @@ let globalGpuBuildUrl: string | undefined;
 let globalUserId: string | undefined;
 let globalUsername: string | undefined;
 let globalComputeTier: string | undefined;
+let globalBaseUrl: string | undefined;
 
-export function setGpuApiToken(apiToken: string, gpuBuildUrl?: string, userId?: string, username?: string, computeTier?: string): void {
+export function setGpuApiToken(apiToken: string, gpuBuildUrl?: string, userId?: string, username?: string, computeTier?: string, baseUrl?: string): void {
   globalApiToken = apiToken;
   globalGpuBuildUrl = gpuBuildUrl;
   globalUserId = userId;
   globalUsername = username;
   globalComputeTier = computeTier;
+  globalBaseUrl = baseUrl;
 }
 
 export function GPUFunction(options: GPUFunctionOptions): GPUFunctionBuilder {
+  // Capture caller file FIRST before any async operations change the call stack
+  const callerFile = getCallerFile();
+  const callerDir = callerFile ? dirname(callerFile) : undefined;
+
   if (!globalApiToken) {
     throw new ValidationError('API key not set. Initialize Buildfunctions client first.');
   }
-  return createGPUFunctionBuilder(options, globalApiToken, globalGpuBuildUrl, globalUserId, globalUsername, globalComputeTier);
+  return createGPUFunctionBuilder(options, globalApiToken, globalGpuBuildUrl, globalUserId, globalUsername, globalComputeTier, callerDir, globalBaseUrl);
 }

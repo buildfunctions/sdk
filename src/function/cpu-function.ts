@@ -3,8 +3,10 @@
  */
 
 import type { CPUFunctionOptions, DeployedFunction } from '../types/index.js';
-import { ValidationError } from '../utils/errors.js';
-import { parseMemory } from '../utils/memory.js';
+import { ValidationError } from '../lib/errors.js';
+import { parseMemory } from '../lib/memory.js';
+import { resolveCode, getCallerFile } from '../lib/resolve-code.js';
+import { dirname } from 'path';
 
 const DEFAULT_BASE_URL = 'https://www.buildfunctions.com';
 
@@ -94,12 +96,15 @@ function buildRequestBody(options: CPUFunctionOptions): Record<string, unknown> 
 /**
  * Create a CPU Function builder
  */
-function createCPUFunctionBuilder(options: CPUFunctionOptions, apiToken: string, baseUrl?: string): CPUFunctionBuilder {
-  validateOptions(options);
+function createCPUFunctionBuilder(options: CPUFunctionOptions, apiToken: string, baseUrl?: string, callerDir?: string): CPUFunctionBuilder {
   const resolvedBaseUrl = baseUrl ?? DEFAULT_BASE_URL;
 
   const deploy = async (): Promise<DeployedFunction | null> => {
-    const body = buildRequestBody(options);
+    // Resolve code (inline string or file path)
+    const resolvedCode = await resolveCode(options.code, callerDir);
+    const resolvedOptions = { ...options, code: resolvedCode };
+    validateOptions(resolvedOptions);
+    const body = buildRequestBody(resolvedOptions);
 
     const response = await fetch(`${resolvedBaseUrl}/api/functions/build`, {
       method: 'POST',
@@ -138,8 +143,12 @@ export function setApiToken(apiToken: string, baseUrl?: string): void {
  * Factory function to create a CPU Function builder
  */
 export function CPUFunction(options: CPUFunctionOptions): CPUFunctionBuilder {
+  // Capture caller file FIRST before any async operations change the call stack
+  const callerFile = getCallerFile();
+  const callerDir = callerFile ? dirname(callerFile) : undefined;
+
   if (!globalApiToken) {
     throw new ValidationError('API key not set. Initialize Buildfunctions client first or call setApiToken()');
   }
-  return createCPUFunctionBuilder(options, globalApiToken, globalBaseUrl);
+  return createCPUFunctionBuilder(options, globalApiToken, globalBaseUrl, callerDir);
 }

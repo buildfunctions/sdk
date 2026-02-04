@@ -4,7 +4,7 @@
  */
 export function detectFramework(requirements: string | undefined): 'pytorch' | undefined {
   if (!requirements) {
-    return 'pytorch'; // default (todo: remove from being the default)      
+    return 'pytorch';
   }
 
   const lower = requirements.toLowerCase();
