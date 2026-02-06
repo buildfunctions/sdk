@@ -1,11 +1,11 @@
 import 'dotenv/config'
-// import { Buildfunctions, CPUSandbox } from '../dist/index.js' 
-import { Buildfunctions, CPUSandbox } from 'buildfunctions'
+import { Buildfunctions, GPUSandbox } from '../../dist/index.js'
+// import { Buildfunctions, GPUSandbox } from 'buildfunctions'
 
 const API_TOKEN = process.env.BUILDFUNCTIONS_API_TOKEN
 
-async function testCpuSandbox() {
-  console.log('Testing CPU Sandbox...\n')
+async function testGpuSandboxWithModel() {
+  console.log('Testing GPU Sandbox with Local Model...\n')
 
   if (!API_TOKEN) {
     console.error('Error: Set BUILDFUNCTIONS_API_TOKEN in .env file')
@@ -20,33 +20,37 @@ async function testCpuSandbox() {
     const buildfunctions = await Buildfunctions({ apiToken: API_TOKEN })
     console.log('   Authenticated as:', buildfunctions.user.username)
 
-    // Step 2: Create CPU Sandbox with handler code
-    console.log('\n2. Creating CPU Sandbox...')
+    // Step 2: Create GPU Sandbox with handler code and local model
+    console.log('\n2. Creating GPU Sandbox with local model...')
 
-    sandbox = await CPUSandbox.create({
-      name: 'sdk-cpu-sandbox-' + Date.now(),
+    sandbox = await GPUSandbox.create({
+      name: 'sdk-gpu-sandbox-model-' + Date.now(),
       language: 'python',
-      code: '/path/to/code/cpu_sandbox_code.py',
-      memory: 128,
-      timeout: 30,
+      memory: 10000,
+      timeout: 300,
+      vcpus: 6,
+      code: './gpu_sandbox_code.py',
+      model: '/path/to/models/Qwen/Qwen3-8B',
+      requirements: "torch"
     })
-    console.log('   CPU Sandbox created')
+    console.log('   GPU Sandbox created')
     console.log('   ID:', sandbox.id)
     console.log('   Name:', sandbox.name)
     console.log('   Runtime:', sandbox.runtime)
+    console.log('   GPU:', sandbox.gpu)
     console.log('   Endpoint:', sandbox.endpoint)
 
-    // Step 3: Run CPU Sandbox
-    console.log('\n3. Running CPU Sandbox...')
+    // Step 3: Run GPU Sandbox
+    console.log('\n3. Running GPU Sandbox...')
     const result = await sandbox.run()
     console.log('   Result:', JSON.stringify(result, null, 2))
 
     // Step 4: Clean up
-    console.log('\n4. Deleting CPU Sandbox...')
+    console.log('\n4. Deleting GPU Sandbox...')
     await sandbox.delete()
-    console.log('   CPU Sandbox deleted')
+    console.log('   GPU Sandbox deleted')
 
-    console.log('\nCPU Sandbox test completed!')
+    console.log('\nGPU Sandbox with local model test completed!')
 
   } catch (error) {
     console.error('\nTest failed:', error.message)
@@ -58,7 +62,7 @@ async function testCpuSandbox() {
       console.log('Attempting cleanup...')
       try {
         await sandbox.delete()
-        console.log('CPU Sandbox cleaned up')
+        console.log('GPU Sandbox cleaned up')
       } catch (e) {
         console.error('Cleanup failed:', e.message)
       }
@@ -68,4 +72,4 @@ async function testCpuSandbox() {
   }
 }
 
-testCpuSandbox()
+testGpuSandboxWithModel()

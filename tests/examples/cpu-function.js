@@ -1,6 +1,6 @@
 import 'dotenv/config'
-// import { Buildfunctions, CPUFunction } from '../dist/index.js'
-import { Buildfunctions, CPUFunction } from 'buildfunctions'
+import { Buildfunctions, CPUFunction } from '../../dist/index.js'
+// import { Buildfunctions, CPUFunction } from 'buildfunctions'
 
 const API_TOKEN = process.env.BUILDFUNCTIONS_API_TOKEN
 

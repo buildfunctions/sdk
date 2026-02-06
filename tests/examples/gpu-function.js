@@ -1,6 +1,6 @@
 import 'dotenv/config'
-// import { Buildfunctions, GPUFunction } from '../dist/index.js'
-import { Buildfunctions, GPUFunction } from 'buildfunctions'
+import { Buildfunctions, GPUFunction } from '../../dist/index.js'
+// import { Buildfunctions, GPUFunction } from 'buildfunctions'
 
 const API_TOKEN = process.env.BUILDFUNCTIONS_API_TOKEN
 

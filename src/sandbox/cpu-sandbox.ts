@@ -83,9 +83,7 @@ async function waitForEndpoint(endpoint: string, maxAttempts = 60, delayMs = 500
       const res = await httpsGetWithIP(ip, hostname, path);
       if (res.status >= 200 && res.status < 500) return;
     } catch {
-      if (attempt === 1 || attempt % 10 === 0) {
-        console.log(`   Waiting... (attempt ${attempt}/${maxAttempts})`);
-      }
+      // Silently wait for endpoint to become available
     }
     await new Promise(r => setTimeout(r, delayMs));
   }
