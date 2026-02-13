@@ -24,7 +24,7 @@ interface DeployResponse {
   name?: string;
   subdomain?: string;
   endpoint?: string;
-  lambdaUrl?: string;
+  url?: string;
   error?: string;
   code?: string;
 }
@@ -83,6 +83,12 @@ function validateOptions(options: GPUFunctionOptions): void {
   if (options.language !== 'python') {
     throw new ValidationError('GPU Functions currently only support Python. Additional languages coming soon.');
   }
+
+  if (options.gpuCount !== undefined) {
+    if (!Number.isInteger(options.gpuCount) || options.gpuCount < 1 || options.gpuCount > 10) {
+      throw new ValidationError('gpuCount must be an integer between 1 and 10');
+    }
+  }
 }
 
 function buildRequestBody(options: GPUFunctionOptions): Record<string, unknown> {
@@ -92,18 +98,30 @@ function buildRequestBody(options: GPUFunctionOptions): Record<string, unknown> 
     code,
     config,
     envVariables,
-    dependencies,
     cronSchedule,
     framework,
   } = options;
 
   // Auto-infer runtime from language (server handles runtimeVersion)
   const runtime = options.runtime ?? getDefaultRuntime(language);
-  // Default GPU to T4
-  const gpu = options.gpu ?? 'T4';
+  // Default GPU to T4G (accept T4 for backwards compat)
+  const gpu = options.gpu === 'T4' ? 'T4G' : (options.gpu ?? 'T4G');
 
   const fileExt = getFileExtension(language);
   const functionName = name.toLowerCase();
+
+  // Support top-level memory/timeout (preferred) or nested config.memory/config.timeout
+  const memoryRaw = options.memory ?? config?.memory;
+  const timeoutRaw = options.timeout ?? config?.timeout;
+  // Support top-level requirements (preferred) or dependencies
+  const requirementsRaw = options.requirements ?? options.dependencies;
+  const requirements = formatRequirements(requirementsRaw);
+
+  // When gpuCount >= 2, user specifies totals — divide per VM
+  const gpuCount = options.gpuCount ?? 1;
+  const perVmDivisor = gpuCount >= 2 ? gpuCount : 1;
+  const memoryTotal = memoryRaw ? parseMemory(memoryRaw) : 4096;
+  const vcpusTotal = options.vcpus ?? 10;
 
   return {
     name: functionName,
@@ -114,14 +132,14 @@ function buildRequestBody(options: GPUFunctionOptions): Record<string, unknown> 
     fileExt,
     processorType: 'GPU',
     gpu,
-    memoryAllocated: config?.memory ? parseMemory(config.memory) : 4096,
-    timeout: config?.timeout ?? 180,
-    cpuCores: options.vcpus ?? 10,
+    memoryAllocated: Math.floor(memoryTotal / perVmDivisor),
+    timeout: timeoutRaw ?? 180,
+    cpuCores: Math.floor(vcpusTotal / perVmDivisor),
     envVariables: envVariables ? JSON.stringify(Object.entries(envVariables).map(([key, value]) => ({ key, value }))) : '[]',
-    requirements: formatRequirements(dependencies),
+    requirements,
     cronExpression: cronSchedule ?? '',
     totalVariables: envVariables ? Object.keys(envVariables).length : 0,
-    selectedFramework: framework ?? detectFramework(formatRequirements(dependencies)),
+    selectedFramework: framework ?? detectFramework(requirements),
     // GPU Function requires these fields
     useEmptyFolder: true,
     selectedFunction: {
@@ -137,6 +155,7 @@ function buildRequestBody(options: GPUFunctionOptions): Record<string, unknown> 
       gpufProjectTitleState: 'test',
       useEmptyFolder: true,
     },
+    gpuCount,
   };
 }
 
@@ -220,11 +239,11 @@ function createGPUFunctionBuilder(
               name: funcName,
               subdomain: funcName,
               endpoint,
-              lambdaUrl: data.data?.sslCertificateEndpoint || '',
+              url: data.data?.sslCertificateEndpoint || '',
               language: options.language,
               runtime: resolvedRuntime,
-              lambdaMemoryAllocated: options.config?.memory ? parseMemory(options.config.memory) : 4096,
-              timeoutSeconds: options.config?.timeout ?? 180,
+              memoryAllocated: (options.memory ?? options.config?.memory) ? parseMemory(options.memory ?? options.config!.memory!) : 4096,
+              timeoutSeconds: options.timeout ?? options.config?.timeout ?? 180,
               isGPUF: true,
               framework: options.framework,
               createdAt: new Date().toISOString(),

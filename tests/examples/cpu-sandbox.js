@@ -27,7 +27,7 @@ async function testCpuSandbox() {
       name: 'sdk-cpu-sandbox-' + Date.now(),
       language: 'python',
       code: '/path/to/code/cpu_sandbox_code.py',
-      memory: 128,
+      memory: "128MB",
       timeout: 30,
     })
     console.log('   CPU Sandbox created')

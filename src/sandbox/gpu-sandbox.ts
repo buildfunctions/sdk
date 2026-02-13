@@ -75,6 +75,11 @@ function validateConfig(config: GPUSandboxConfig): void {
   if (config.language !== 'python') {
     throw new ValidationError('GPU Sandboxes currently only support Python. Additional languages coming soon.');
   }
+  if (config.gpuCount !== undefined) {
+    if (!Number.isInteger(config.gpuCount) || config.gpuCount < 1 || config.gpuCount > 10) {
+      throw new ValidationError('gpuCount must be an integer between 1 and 10');
+    }
+  }
 }
 
 function getFileExtension(language: string): string {
@@ -160,17 +165,66 @@ function formatRequirements(requirements: string | string[] | undefined): string
   return requirements;
 }
 
-function buildRequestBody(config: GPUSandboxConfig, localModelInfo: LocalModelInfo | null): Record<string, unknown> {
+function buildRequestBody(config: GPUSandboxConfig, localModelInfo: LocalModelInfo | null, modelByName: string | null = null): Record<string, unknown> {
   const name = config.name.toLowerCase();
   const language = config.language;
   const runtime = config.runtime ?? getDefaultRuntime(language);
   const code = config.code ?? '';
   const fileExt = getFileExtension(language);
-  const gpu = config.gpu ?? 'T4';
+  const gpu = config.gpu === 'T4' ? 'T4G' : (config.gpu ?? 'T4G');
   const requirements = formatRequirements(config.requirements);
 
   const hasLocalModel = localModelInfo !== null;
-  const modelName = hasLocalModel ? localModelInfo.sanitizedModelName : null;
+  const hasModelByName = modelByName !== null;
+  const modelName = hasLocalModel ? localModelInfo.sanitizedModelName : (hasModelByName ? modelByName : null);
+
+  // When gpuCount >= 2, user specifies totals — divide per VM
+  const gpuCount = config.gpuCount ?? 1;
+  const perVmDivisor = gpuCount >= 2 ? gpuCount : 1;
+  const memoryTotal = config.memory ? parseMemory(config.memory) : 10000;
+  const vcpusTotal = config.vcpus ?? 10;
+
+  // Build selectedModel based on model source
+  let selectedModel: Record<string, unknown>;
+  let useEmptyFolder: boolean;
+  let filesWithinModelFolder: Array<{ name: string; size: number; type: string; webkitRelativePath: string }>;
+  let fileNamesWithinModelFolder: string[];
+
+  if (hasLocalModel) {
+    selectedModel = {
+      name: localModelInfo.sanitizedModelName,
+      modelName: localModelInfo.sanitizedModelName,
+      currentModelName: localModelInfo.localUploadFileName,
+      isCreatingNewModel: true,
+      gpufProjectTitleState: localModelInfo.sanitizedModelName,
+      useEmptyFolder: false,
+      files: localModelInfo.filesWithinModelFolder,
+    };
+    useEmptyFolder = false;
+    filesWithinModelFolder = localModelInfo.filesWithinModelFolder;
+    fileNamesWithinModelFolder = localModelInfo.fileNamesWithinModelFolder;
+  } else if (hasModelByName) {
+    // Pre-uploaded model referenced by name — build server uses existing model
+    selectedModel = {
+      currentModelName: modelByName,
+      isCreatingNewModel: false,
+      gpufProjectTitleState: modelByName,
+      useEmptyFolder: false,
+    };
+    useEmptyFolder = false;
+    filesWithinModelFolder = [];
+    fileNamesWithinModelFolder = [];
+  } else {
+    selectedModel = {
+      currentModelName: null,
+      isCreatingNewModel: true,
+      gpufProjectTitleState: 'test',
+      useEmptyFolder: true,
+    };
+    useEmptyFolder = true;
+    filesWithinModelFolder = [];
+    fileNamesWithinModelFolder = [];
+  }
 
   return {
     name,
@@ -182,15 +236,15 @@ function buildRequestBody(config: GPUSandboxConfig, localModelInfo: LocalModelIn
     processorType: 'GPU',
     sandboxType: 'gpu',
     gpu,
-    memoryAllocated: config.memory ? parseMemory(config.memory) : 10000,
+    memoryAllocated: Math.floor(memoryTotal / perVmDivisor),
     timeout: config.timeout ?? 300,
-    cpuCores: config.vcpus ?? 10,
+    cpuCores: Math.floor(vcpusTotal / perVmDivisor),
     envVariables: JSON.stringify(config.envVariables ?? []),
     requirements,
     cronExpression: '',
     totalVariables: (config.envVariables ?? []).length,
     selectedFramework: detectFramework(requirements),
-    useEmptyFolder: !hasLocalModel,
+    useEmptyFolder,
     modelPath: hasLocalModel ? `${localModelInfo.sanitizedModelName}/mnt/storage/${localModelInfo.localUploadFileName}` : null,
     selectedFunction: {
       name,
@@ -199,24 +253,12 @@ function buildRequestBody(config: GPUSandboxConfig, localModelInfo: LocalModelIn
       language,
       sizeInBytes: code ? new TextEncoder().encode(code).length : 0,
     },
-    selectedModel: hasLocalModel ? {
-      name: localModelInfo.sanitizedModelName,
-      modelName: localModelInfo.sanitizedModelName,
-      currentModelName: localModelInfo.localUploadFileName,
-      isCreatingNewModel: true,
-      gpufProjectTitleState: localModelInfo.sanitizedModelName,
-      useEmptyFolder: false,
-      files: localModelInfo.filesWithinModelFolder,
-    } : {
-      currentModelName: null,
-      isCreatingNewModel: true,
-      gpufProjectTitleState: 'test',
-      useEmptyFolder: true,
-    },
+    selectedModel,
     // File metadata for build server
-    filesWithinModelFolder: hasLocalModel ? localModelInfo.filesWithinModelFolder : [],
-    fileNamesWithinModelFolder: hasLocalModel ? localModelInfo.fileNamesWithinModelFolder : [],
+    filesWithinModelFolder,
+    fileNamesWithinModelFolder,
     modelName: modelName,
+    gpuCount: config.gpuCount ?? 1,
   };
 }
 
@@ -365,14 +407,19 @@ export const GPUSandbox = {
       throw new ValidationError('GPU build URL not configured');
     }
 
-    // Check if model is a local path
+    // Check if model is a local path or a model-by-name reference
     const modelPath = typeof config.model === 'string' ? config.model : config.model?.path;
     let localModelInfo: LocalModelInfo | null = null;
+    let modelByName: string | null = null;
 
     if (modelPath && isLocalPath(modelPath)) {
       console.log('   Local model detected:', modelPath);
       localModelInfo = getLocalModelInfo(modelPath, config.name);
       console.log('   Found', localModelInfo.files.length, 'files to upload');
+    } else if (modelPath) {
+      // Model is a name string referencing a pre-uploaded model
+      modelByName = sanitizeModelName(modelPath);
+      console.log('   Using pre-uploaded model:', modelByName);
     }
 
     // Resolve code (inline string or file path)
@@ -380,7 +427,7 @@ export const GPUSandbox = {
     const resolvedConfig = { ...config, code: resolvedCode };
 
     // Build request body (same structure as frontend ModelsList.jsx)
-    const requestBody = buildRequestBody(resolvedConfig, localModelInfo);
+    const requestBody = buildRequestBody(resolvedConfig, localModelInfo, modelByName);
 
     const body = {
       ...requestBody,
@@ -454,7 +501,7 @@ export const GPUSandbox = {
               sandboxId || name,
               name,
               sandboxRuntime,
-              config.gpu ?? 'T4',
+              config.gpu === 'T4' ? 'T4G' : (config.gpu ?? 'T4G'),
               sandboxEndpoint,
               globalApiToken!,
               baseUrl

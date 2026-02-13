@@ -28,7 +28,7 @@ async function testCpuFunction() {
       name: 'sdk-cpu-function-' + Date.now(),
       code: './cpu_function_code.py',
       language: 'python',
-      memory: 128,
+      memory: "128MB",
       timeout: 30
     })
 

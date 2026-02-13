@@ -42,6 +42,9 @@ export type { GPUFunctionBuilder } from './function/gpu-function.js';
 export { CPUSandbox } from './sandbox/cpu-sandbox.js';
 export { GPUSandbox } from './sandbox/gpu-sandbox.js';
 
+// Re-export model
+export { Model } from './model/model.js';
+
 // Re-export types
 export type {
   BuildfunctionsConfig,
@@ -67,6 +70,9 @@ export type {
   FindUniqueOptions,
   ListOptions,
   ErrorCode,
+  ModelConfig,
+  ModelFindOptions,
+  ModelInstance,
 } from './types/index.js';
 
 // Re-export errors
@@ -87,6 +93,7 @@ import { setApiToken } from './function/cpu-function.js';
 import { setGpuApiToken } from './function/gpu-function.js';
 import { setCpuSandboxApiToken } from './sandbox/cpu-sandbox.js';
 import { setGpuSandboxApiToken } from './sandbox/gpu-sandbox.js';
+import { setModelApiToken } from './model/model.js';
 
 export function init(
   apiToken: string,
@@ -100,4 +107,5 @@ export function init(
   setGpuApiToken(apiToken, gpuBuildUrl, userId, username, computeTier, baseUrl);
   setCpuSandboxApiToken(apiToken, baseUrl);
   setGpuSandboxApiToken(apiToken, gpuBuildUrl, userId, username, computeTier, baseUrl);
+  setModelApiToken(apiToken, baseUrl, userId, username);
 }

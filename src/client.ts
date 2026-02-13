@@ -12,6 +12,7 @@ import { setCpuSandboxApiToken } from './sandbox/cpu-sandbox.js';
 import { setGpuSandboxApiToken } from './sandbox/gpu-sandbox.js';
 import { setApiToken } from './function/cpu-function.js';
 import { setGpuApiToken, GPUFunction } from './function/gpu-function.js';
+import { setModelApiToken } from './model/model.js';
 import type {
   BuildfunctionsConfig,
   DeployedFunction,
@@ -70,18 +71,21 @@ function getFileExtension(language: string): string {
 }
 
 function createFunctionsManager(http: HttpClient): FunctionsManager {
-  const wrapFunction = (fn: Omit<DeployedFunction, 'delete'>): DeployedFunction => {
+  const wrapFunction = (fn: Omit<DeployedFunction, 'delete'> & Record<string, any>): DeployedFunction => {
     return {
       ...fn,
+      // Map legacy API field names to new SDK field names
+      url: fn.url ?? fn.lambdaUrl ?? '',
+      memoryAllocated: fn.memoryAllocated ?? fn.lambdaMemoryAllocated ?? 0,
       delete: async () => {
-        await http.delete('/api/sdk/functions/build', { siteId: fn.id });
+        await http.delete('/api/sdk/function/build', { siteId: fn.id });
       },
     };
   };
 
   const list = async (options: ListOptions = {}): Promise<DeployedFunction[]> => {
     const page = options.page ?? 1;
-    const response = await http.get<FunctionListResponse>('/api/sdk/functions', { page });
+    const response = await http.get<FunctionListResponse>('/api/sdk/function', { page });
     return response.stringifiedQueryResults.map((fn) => wrapFunction(fn));
   };
 
@@ -90,7 +94,7 @@ function createFunctionsManager(http: HttpClient): FunctionsManager {
 
     if (where.id) {
       try {
-        const fn = await http.get<DeployedFunction>('/api/sdk/functions/build', { siteId: where.id });
+        const fn = await http.get<DeployedFunction>('/api/sdk/function/build', { siteId: where.id });
         return wrapFunction(fn);
       } catch (error) {
         if (error instanceof NotFoundError) {
@@ -110,7 +114,7 @@ function createFunctionsManager(http: HttpClient): FunctionsManager {
   };
 
   const get = async (siteId: string): Promise<DeployedFunction> => {
-    const fn = await http.get<DeployedFunction>('/api/sdk/functions/build', { siteId });
+    const fn = await http.get<DeployedFunction>('/api/sdk/function/build', { siteId });
     return wrapFunction(fn);
   };
 
@@ -134,7 +138,7 @@ function createFunctionsManager(http: HttpClient): FunctionsManager {
         code: resolvedCode,
         language: options.language,
         runtime,
-        gpu: options.gpu ?? 'T4',
+        gpu: options.gpu === 'T4' ? 'T4G' : (options.gpu ?? 'T4G'),
         config: {
           memory: options.memory ? parseMemory(options.memory) : 1024,
           timeout: options.timeout ?? 60,
@@ -175,17 +179,17 @@ function createFunctionsManager(http: HttpClient): FunctionsManager {
       functionCount: 0,
     };
 
-    const response = await http.post<{ siteId: string; sslCertificateEndpoint: string; endpoint: string }>('/api/sdk/functions/build', body);
+    const response = await http.post<{ siteId: string; sslCertificateEndpoint: string; endpoint: string }>('/api/sdk/function/build', body);
 
     return wrapFunction({
       id: response.siteId,
       name,
       subdomain: name,
       endpoint: response.endpoint,
-      lambdaUrl: response.sslCertificateEndpoint || '',
+      url: response.sslCertificateEndpoint || '',
       language: options.language,
       runtime: runtime!,
-      lambdaMemoryAllocated: options.memory ? parseMemory(options.memory) : 128,
+      memoryAllocated: options.memory ? parseMemory(options.memory) : 128,
       timeoutSeconds: options.timeout ?? 10,
       isGPUF: false,
       framework: options.framework,
@@ -195,7 +199,7 @@ function createFunctionsManager(http: HttpClient): FunctionsManager {
   };
 
   const deleteFn = async (siteId: string): Promise<void> => {
-    await http.delete('/api/sdk/functions/build', { siteId });
+    await http.delete('/api/sdk/function/build', { siteId });
   };
 
   return {
@@ -250,6 +254,7 @@ export async function Buildfunctions(config: BuildfunctionsConfig): Promise<Buil
   setCpuSandboxApiToken(authResponse.sessionToken, baseUrl);
   setGpuSandboxApiToken(authResponse.sessionToken, gpuBuildUrl, userId, username, computeTier, baseUrl);
   setGpuApiToken(authResponse.sessionToken, gpuBuildUrl, userId, username, computeTier, baseUrl);
+  setModelApiToken(authResponse.sessionToken, baseUrl, userId, username);
 
   const functions = createFunctionsManager(http);
 

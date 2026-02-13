@@ -4,35 +4,35 @@ import { Buildfunctions, GPUFunction } from '../../dist/index.js'
 
 const API_TOKEN = process.env.BUILDFUNCTIONS_API_TOKEN
 
-async function testGpuFunction() {
-  console.log('Testing GPU Function...\n')
+async function testGpuFunctionSharedMemory() {
+  console.log('Testing GPU Function with Shared Memory (gpuCount: 2)...\n')
 
   if (!API_TOKEN) {
     console.error('Error: Set BUILDFUNCTIONS_API_TOKEN in .env file')
     process.exit(1)
   }
 
-  let buildfunctions = null
   let deployedFunction = null
 
   try {
     // Step 1: Authenticate
     console.log('1. Authenticating...')
-    buildfunctions = await Buildfunctions({ apiToken: API_TOKEN })
+    const buildfunctions = await Buildfunctions({ apiToken: API_TOKEN })
     console.log('   Authenticated as:', buildfunctions.user.username)
 
-    // Step 2: Deploy GPU Function
-    console.log('\n2. Deploying GPU Function...')
+    // Step 2: Deploy GPU Function with gpuCount: 2
+    console.log('\n2. Deploying GPU Function with gpuCount: 2...')
 
     deployedFunction = await GPUFunction.create({
-      name: 'sdk-gpu-function-' + Date.now(),
-      code: '/path/to/code/gpu_function_code.py',
+      name: 'sdk-gpu-func-shared-mem-' + Date.now(),
+      code: '/path/to/code/gpu_function_shared_memory_code.py',
       language: 'python',
       gpu: 'T4G',
-      vcpus: 30,
-      memory: "50000MB",
+      vcpus: 6,
+      gpuCount: 2,
+      memory: "10000MB",
       timeout: 300,
-      requirements: ['transformers==4.47.1', 'torch', 'accelerate'],
+      requirements: 'torch',
     })
 
     console.log('   GPU Function deployed')
@@ -66,13 +66,40 @@ async function testGpuFunction() {
     console.log('   Status:', response.status)
     console.log('   Response:', responseData)
 
-    // Step 5: Clean up
-    console.log('\n5. Deleting GPU Function...')
+    // Step 5: Verify GPU memory and device info in response
+    console.log('\n5. Verifying GPU info...')
+    try {
+      const parsed = JSON.parse(responseData)
+      const data = parsed.body ? JSON.parse(parsed.body) : parsed
+
+      console.log('   CUDA available:', data.cuda_available)
+      console.log('   Device count:', data.device_count)
+
+      if (data.devices && data.devices.length > 0) {
+        let totalMemoryMb = 0
+        for (const device of data.devices) {
+          console.log(`   Device ${device.index}: ${device.name} - ${device.memory_total_mb}MB total, ${device.memory_free_mb}MB free`)
+          totalMemoryMb += device.memory_total_mb
+        }
+        console.log(`   Combined GPU memory: ${totalMemoryMb}MB across ${data.devices.length} devices`)
+      }
+
+      if (data.device_count >= 2) {
+        console.log('   PASS: Multiple GPU devices detected')
+      } else {
+        console.log('   WARN: Expected 2 devices, got', data.device_count)
+      }
+    } catch (e) {
+      console.log('   Could not parse response for GPU verification:', e.message)
+    }
+
+    // Step 6: Delete GPU Function
+    console.log('\n6. Deleting GPU Function...')
     await deployedFunction.delete()
     deployedFunction = null
     console.log('   GPU Function deleted')
 
-    console.log('\nGPU Function test completed!')
+    console.log('\nGPU Function shared memory test completed!')
 
   } catch (error) {
     console.error('\nTest failed:', error.message)
@@ -91,4 +118,4 @@ async function testGpuFunction() {
   }
 }
 
-testGpuFunction()
+testGpuFunctionSharedMemory()

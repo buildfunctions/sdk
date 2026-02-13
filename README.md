@@ -133,4 +133,4 @@ console.log('Result:', result)
 await sandbox.delete()
 ```
 
-The SDK is currently in beta.
+The SDK is currently in beta. The SDK is currently in beta. If you encounter any issues or have specific syntax requirements, please reach out and contact us at team@buildfunctions.com, and we’ll work to address them.

@@ -29,7 +29,7 @@ export interface AuthResponse {
 // Function Types
 export type Language = 'javascript' | 'typescript' | 'python' | 'go' | 'shell';
 export type Runtime = 'node' | 'deno' | 'python' | 'go' | 'shell';
-export type GPUType = 'T4';
+export type GPUType = 'T4G' | 'T4';
 export type Framework = 'pytorch';
 export type Memory = '128Mi' | '256Mi' | '512Mi' | '1Gi' | '2Gi' | '4Gi' | '8Gi' | '16Gi' | '32Gi' | '64Gi';
 
@@ -53,6 +53,10 @@ export interface CPUFunctionOptions {
 export interface GPUFunctionOptions extends CPUFunctionOptions {
   gpu?: GPUType;
   vcpus?: number;
+  gpuCount?: number;
+  memory?: string | number;  // "2GB", "1024MB", or number in MB (top-level shorthand for config.memory)
+  timeout?: number;          // Top-level shorthand for config.timeout
+  requirements?: string | string[];  // Top-level shorthand for dependencies
   framework?: Framework;
   modelPath?: string;
   modelName?: string;
@@ -83,10 +87,10 @@ export interface DeployedFunction {
   name: string;
   subdomain: string;
   endpoint: string;
-  lambdaUrl: string;
+  url: string;
   language: string;
   runtime: string;
-  lambdaMemoryAllocated: number;
+  memoryAllocated: number;
   timeoutSeconds: number;
   cpuCores?: string;
   isGPUF: boolean;
@@ -111,6 +115,7 @@ export interface CPUSandboxConfig {
 export interface GPUSandboxConfig extends CPUSandboxConfig {
   gpu?: GPUType;
   vcpus?: number;
+  gpuCount?: number;
   code?: string;
   model?: string | {
     name: string;
@@ -186,3 +191,22 @@ export type ErrorCode =
   | 'VALIDATION_ERROR'
   | 'NETWORK_ERROR'
   | 'UNKNOWN_ERROR';
+
+// Model resource types
+export interface ModelConfig {
+  path: string;
+  name?: string;
+}
+
+export interface ModelFindOptions {
+  where: {
+    name?: string;
+    id?: string;
+  };
+}
+
+export interface ModelInstance {
+  id: string;
+  name: string;
+  delete: () => Promise<void>;
+}

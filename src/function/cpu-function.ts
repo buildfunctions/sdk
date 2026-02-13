@@ -108,7 +108,7 @@ function createCPUFunctionBuilder(options: CPUFunctionOptions, apiToken: string,
     const runtime = options.runtime ?? getDefaultRuntime(options.language);
     const name = options.name.toLowerCase();
 
-    const response = await fetch(`${resolvedBaseUrl}/api/sdk/functions/build`, {
+    const response = await fetch(`${resolvedBaseUrl}/api/sdk/function/build`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -124,7 +124,7 @@ function createCPUFunctionBuilder(options: CPUFunctionOptions, apiToken: string,
     const data = (await response.json()) as DeployResponse;
 
     const deleteFn = async () => {
-      await fetch(`${resolvedBaseUrl}/api/sdk/functions/build`, {
+      await fetch(`${resolvedBaseUrl}/api/sdk/function/build`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -139,10 +139,10 @@ function createCPUFunctionBuilder(options: CPUFunctionOptions, apiToken: string,
       name,
       subdomain: name,
       endpoint: data.endpoint || '',
-      lambdaUrl: data.sslCertificateEndpoint || '',
+      url: data.sslCertificateEndpoint || '',
       language: options.language,
       runtime,
-      lambdaMemoryAllocated: options.config?.memory ? parseMemory(options.config.memory) : 1024,
+      memoryAllocated: options.config?.memory ? parseMemory(options.config.memory) : 1024,
       timeoutSeconds: options.config?.timeout ?? 10,
       isGPUF: false,
       framework: undefined,
