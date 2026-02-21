@@ -212,7 +212,7 @@ const result = await controls.run(
     destination: sandbox.endpoint,
     action: 'execute',
   },
-  async ({ signal }) => sandbox.run()
+  async () => sandbox.run()
 )
 
 console.log('Result:', JSON.stringify(result, null, 2))
@@ -220,5 +220,9 @@ await sandbox.delete()
 ```
 
 Full runtime controls documentation: https://www.buildfunctions.com/docs/runtime-controls
+
+Runtime controls are provided as best-effort tools to help manage application behavior and resource usage. They do not guarantee prevention of all unintended outcomes. Users are responsible for monitoring their own workloads. See our [Terms of Service](https://www.buildfunctions.com/terms-of-service) for full details.
+
+By using this SDK, you agree to the [Terms of Service](https://www.buildfunctions.com/terms-of-service).
 
 The SDK is currently in beta. If you encounter any issues or have specific syntax requirements, please reach out and contact us at team@buildfunctions.com, and we’ll work to address them.
