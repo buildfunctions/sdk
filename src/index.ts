@@ -45,9 +45,40 @@ export { GPUSandbox } from './sandbox/gpu-sandbox.js';
 // Re-export model
 export { Model } from './model/model.js';
 
+// Re-export runtime controls wrapper mode
+export { RuntimeControls } from './runtime-controls/index.js';
+export { applyAgentLogicSafety } from './runtime-controls/agent-logic-safety.js';
+
 // Re-export types
 export type {
   BuildfunctionsConfig,
+  RuntimeControlEvent,
+  RetryBackoffConfig,
+  ToolRetryClassifierContext,
+  ToolRetryClassifierDecision,
+  ToolRetryClassifier,
+  LoopBreakerConfig,
+  RuntimePolicyAction,
+  ToolRuntimeControlsConfig,
+  ToolRuntimeControls,
+  AgentLogicSafetyConfig,
+  AgentLogicInjectionGuardConfig,
+  AgentLogicExitConditionConfig,
+  AgentLogicTerminalAction,
+  AgentLogicIntentAllowlistConfig,
+  AgentLogicIntentAllowlistRule,
+  ToolRuntimeOverrideConfig,
+  ToolRuntimeOverridesConfig,
+  ToolRuntimeStateAdapter,
+  ToolRuntimeStateAdaptersConfig,
+  ToolCallContext,
+  ToolRuntimeExecuteContext,
+  ToolWrapParams,
+  ToolCircuitBreakerConfig,
+  ToolPolicyRule,
+  ToolPolicyGateConfig,
+  ToolPolicyApprovalContext,
+  ToolPolicyApprovalHandler,
   AuthenticatedUser,
   AuthResponse,
   Language,

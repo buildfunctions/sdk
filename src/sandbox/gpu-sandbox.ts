@@ -269,7 +269,8 @@ function createGPUSandboxInstance(
   gpu: GPUType,
   endpoint: string,
   apiToken: string,
-  baseUrl: string
+  baseUrl: string,
+  timeout: number
 ): GPUSandboxInstance {
   let deleted = false;
 
@@ -278,13 +279,18 @@ function createGPUSandboxInstance(
       throw new BuildfunctionsError('Sandbox has been deleted', 'INVALID_REQUEST');
     }
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout * 1000);
+
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiToken}`,
       },
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
 
     const responseText = await response.text();
     if (!responseText) {
@@ -504,7 +510,8 @@ export const GPUSandbox = {
               config.gpu === 'T4' ? 'T4G' : (config.gpu ?? 'T4G'),
               sandboxEndpoint,
               globalApiToken!,
-              baseUrl
+              baseUrl,
+              config.timeout ?? 300
             ));
           });
 

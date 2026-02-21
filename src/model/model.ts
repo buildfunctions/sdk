@@ -6,7 +6,7 @@ import { existsSync, statSync } from 'fs';
 import { basename } from 'path';
 import type { ModelConfig, ModelFindOptions, ModelInstance } from '../types/index.js';
 import { ValidationError, BuildfunctionsError } from '../lib/errors.js';
-import { getFilesInDirectory, uploadModelFiles } from '../lib/uploader.js';
+import { getFilesInDirectory, uploadModelFiles, type UploadProgress } from '../lib/uploader.js';
 
 const DEFAULT_BASE_URL = 'https://www.buildfunctions.com';
 
@@ -75,6 +75,12 @@ export const Model = {
 
     console.log(`   Found ${files.length} files to upload`);
 
+    // Remap webkitRelativePath to use modelName instead of folder name
+    // e.g. "gpt-oss-120b/subdir/file.bin" → "my-llm/subdir/file.bin"
+    for (const f of files) {
+      f.webkitRelativePath = modelName + f.webkitRelativePath.substring(localUploadFileName.length);
+    }
+
     const filesWithinModelFolder = files.map(f => ({
       name: f.name,
       size: f.size,
@@ -106,14 +112,61 @@ export const Model = {
       modelName: string;
       modelPresignedUrls: Record<string, any>;
       bucketName: string;
+      totalFiles?: number;
+      skippedFiles?: number;
     };
 
-    // Upload files to S3
-    if (data.modelPresignedUrls && Object.keys(data.modelPresignedUrls).length > 0) {
-      console.log('   Uploading model files to S3...');
-      await uploadModelFiles(files, data.modelPresignedUrls, data.bucketName, baseUrl);
-      console.log('   Model files uploaded successfully');
+    const skippedByServer = data.skippedFiles ?? 0;
+    const totalFileCount = data.totalFiles ?? files.length;
+
+    if (skippedByServer > 0) {
+      console.log(`   Resuming upload: ${skippedByServer}/${totalFileCount} files already uploaded`);
     }
+
+    // Upload model files
+    if (data.modelPresignedUrls && Object.keys(data.modelPresignedUrls).length > 0) {
+      const filesToUploadCount = Object.keys(data.modelPresignedUrls).length;
+      console.log(`   Uploading ${filesToUploadCount} file${filesToUploadCount === 1 ? '' : 's'}...`);
+
+      let lastLogTime = 0;
+      await uploadModelFiles(files, data.modelPresignedUrls, data.bucketName, baseUrl, (progress: UploadProgress) => {
+        const now = Date.now();
+        if (now - lastLogTime < 2000 && progress.completedFiles < progress.totalFiles) return;
+        lastLogTime = now;
+
+        const pct = progress.totalBytes > 0
+          ? Math.round((progress.uploadedBytes / progress.totalBytes) * 100)
+          : 0;
+        const elapsed = (now - progress.startTime) / 1000;
+        let eta = '';
+        if (elapsed > 0 && pct > 0 && pct < 100) {
+          const remaining = (elapsed / pct) * (100 - pct);
+          if (remaining >= 60) {
+            eta = ` | ETA: ${Math.ceil(remaining / 60)}m`;
+          } else {
+            eta = ` | ETA: ${Math.ceil(remaining)}s`;
+          }
+        }
+
+        const totalMB = (progress.totalBytes / (1024 * 1024)).toFixed(0);
+        const uploadedMB = (progress.uploadedBytes / (1024 * 1024)).toFixed(0);
+        process.stdout.write(`\r   [${modelName}] ${pct}% (${uploadedMB}/${totalMB} MB) ${progress.completedFiles}/${progress.totalFiles} files${eta}   `);
+      });
+      process.stdout.write('\n');
+      console.log('   Upload complete');
+    } else {
+      console.log('   All files already uploaded');
+    }
+
+    // Mark upload as complete
+    await fetch(`${baseUrl}/api/sdk/model/complete`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${globalApiToken}`,
+      },
+      body: JSON.stringify({ modelName }),
+    });
 
     const modelId = data.modelId;
     const finalModelName = data.modelName;

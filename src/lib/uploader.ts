@@ -3,7 +3,7 @@
  */
 
 import { statSync, readdirSync } from 'fs';
-import { readFile } from 'fs/promises';
+import { readFile, open } from 'fs/promises';
 import { basename, join, relative } from 'path';
 
 const CHUNK_SIZE = 9 * 1024 * 1024;
@@ -54,6 +54,18 @@ export async function uploadFile(content: Buffer, presignedUrl: string): Promise
   }
 }
 
+async function readChunk(filePath: string, start: number, end: number): Promise<Buffer> {
+  const fh = await open(filePath, 'r');
+  try {
+    const length = end - start;
+    const buf = Buffer.alloc(length);
+    await fh.read(buf, 0, length, start);
+    return buf;
+  } finally {
+    await fh.close();
+  }
+}
+
 async function uploadPart(
   content: Buffer,
   presignedUrl: string,
@@ -81,7 +93,8 @@ async function uploadPart(
 }
 
 export async function uploadMultipartFile(
-  content: Buffer,
+  filePath: string,
+  fileSize: number,
   signedUrls: string[],
   uploadId: string,
   numberOfParts: number,
@@ -97,17 +110,18 @@ export async function uploadMultipartFile(
     for (let j = i; j < Math.min(i + maxParallelUploads, numberOfParts); j++) {
       const partNumber = j + 1;
       const start = j * CHUNK_SIZE;
-      const end = Math.min(start + CHUNK_SIZE, content.length);
-      const chunk = content.slice(start, end);
+      const end = Math.min(start + CHUNK_SIZE, fileSize);
       const signedUrl = signedUrls[j];
       if (!signedUrl) {
         throw new Error(`Missing upload URL for part ${partNumber}`);
       }
 
       batch.push(
-        uploadPart(chunk, signedUrl, partNumber).then((part) => {
-          parts.push(part);
-        })
+        readChunk(filePath, start, end).then((chunk) =>
+          uploadPart(chunk, signedUrl, partNumber).then((part) => {
+            parts.push(part);
+          })
+        )
       );
     }
     await Promise.all(batch);
@@ -166,39 +180,72 @@ export function getFilesInDirectory(dirPath: string): FileMetadata[] {
   return files;
 }
 
+export interface UploadProgress {
+  totalFiles: number;
+  completedFiles: number;
+  totalBytes: number;
+  uploadedBytes: number;
+  skippedFiles: number;
+  startTime: number;
+}
+
 export async function uploadModelFiles(
   files: FileMetadata[],
   presignedUrls: Record<string, PresignedUrlInfo>,
   bucketName: string,
-  baseUrl: string
+  baseUrl: string,
+  onProgress?: (progress: UploadProgress) => void
 ): Promise<void> {
-  const uploadPromises: Promise<void>[] = [];
+  const filesToUpload: { file: FileMetadata; urlInfo: PresignedUrlInfo }[] = [];
 
   for (const file of files) {
     const urlInfo = presignedUrls[file.webkitRelativePath];
     if (!urlInfo) {
-      console.error(`No upload URL found for ${file.webkitRelativePath}`);
       continue;
     }
+    filesToUpload.push({ file, urlInfo });
+  }
 
-    const content = await readFile(file.localPath);
+  const skippedFiles = files.length - filesToUpload.length;
+  const totalBytes = filesToUpload.reduce((sum, { file }) => sum + file.size, 0);
+  const progress: UploadProgress = {
+    totalFiles: filesToUpload.length,
+    completedFiles: 0,
+    totalBytes,
+    uploadedBytes: 0,
+    skippedFiles,
+    startTime: Date.now(),
+  };
+
+  if (onProgress) onProgress({ ...progress });
+
+  const uploadPromises: Promise<void>[] = [];
+
+  for (const { file, urlInfo } of filesToUpload) {
     const signedUrls = urlInfo.signedUrl;
 
-    if (signedUrls.length > 1 && urlInfo.uploadId) {
-      uploadPromises.push(
-        uploadMultipartFile(
-          content,
+    const wrappedUpload = async () => {
+      if (signedUrls.length > 1 && urlInfo.uploadId) {
+        await uploadMultipartFile(
+          file.localPath,
+          file.size,
           signedUrls,
           urlInfo.uploadId,
           urlInfo.numberOfParts || signedUrls.length,
           bucketName,
           urlInfo.s3FilePath || '',
           baseUrl
-        )
-      );
-    } else if (signedUrls.length === 1 && signedUrls[0]) {
-      uploadPromises.push(uploadFile(content, signedUrls[0]));
-    }
+        );
+      } else if (signedUrls.length === 1 && signedUrls[0]) {
+        const content = await readFile(file.localPath);
+        await uploadFile(content, signedUrls[0]);
+      }
+      progress.completedFiles++;
+      progress.uploadedBytes += file.size;
+      if (onProgress) onProgress({ ...progress });
+    };
+
+    uploadPromises.push(wrappedUpload());
   }
 
   await Promise.all(uploadPromises);

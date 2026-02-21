@@ -31,7 +31,7 @@
   </h1>
 </p>
 
-> Hardware-isolated execution environments for AI agents
+> Hardware-isolated execution environments for AI agents — with runtime controls to help keep unattended runs bounded
 
 ## Installation
 
@@ -133,4 +133,92 @@ console.log('Result:', result)
 await sandbox.delete()
 ```
 
-The SDK is currently in beta. The SDK is currently in beta. If you encounter any issues or have specific syntax requirements, please reach out and contact us at team@buildfunctions.com, and we’ll work to address them.
+## Runtime Controls: Help Keep Your Agent Running Unattended
+
+Wrap any tool call with composable guardrails — no API key required, no sandbox needed. RuntimeControls works standalone around your own functions, or combined with Buildfunctions sandboxes.
+
+**Available control layers (configure per workflow):**
+retries with backoff, per-run tool-call budgets, circuit breakers, loop detection, timeout + cancellation, policy gates, injection guards, idempotency, concurrency locks, and event-based observability via event sinks.
+
+### 1. Wrap Any Tool Call (No API Key)
+
+```javascript
+import { RuntimeControls } from 'buildfunctions'
+
+const controls = RuntimeControls.create({
+  maxToolCalls: 50,
+  timeoutMs: 30_000,
+  retry: { maxAttempts: 3, initialDelayMs: 200, backoffFactor: 2 },
+  loopBreaker: { warningThreshold: 5, quarantineThreshold: 8, stopThreshold: 12 },
+  onEvent: (event) => console.log(`[controls] ${event.type}: ${event.message}`),
+})
+
+// Wrap any function — an API call, a shell command, an LLM tool invocation
+const guardedFetch = controls.wrap({
+  toolName: 'api-call',
+  runKey: 'agent-run-1',
+  destination: 'https://api.example.com',
+  run: async ([payload]) => {
+    const res = await fetch('https://api.example.com/data', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+    return res.json()
+  },
+})
+
+const result = await guardedFetch({ query: 'latest results' })
+console.log(result)
+
+// Reset budget counters when starting a new run
+await controls.reset('agent-run-1')
+```
+
+### 2. With Hardware-Isolated Sandbox + Agent Safety
+
+```javascript
+import { Buildfunctions, CPUSandbox, RuntimeControls, applyAgentLogicSafety } from 'buildfunctions'
+
+await Buildfunctions({ apiToken: process.env.BUILDFUNCTIONS_API_TOKEN })
+
+const sandbox = await CPUSandbox.create({
+  name: 'guarded-sandbox',
+  language: 'python',
+  code: './my_handler.py',
+  memory: 128,
+  timeout: 30,
+})
+
+const controls = RuntimeControls.create(
+  applyAgentLogicSafety(
+    {
+      maxToolCalls: 20,
+      retry: { maxAttempts: 2, initialDelayMs: 200, backoffFactor: 2 },
+      onEvent: (event) => console.log(`[controls] ${event.type}: ${event.message}`),
+    },
+    {
+      injectionGuard: {
+        enabled: true,
+        patterns: [/ignore\s+previous\s+instructions/i, /\brm\s+-rf\b/i],
+      },
+    }
+  )
+)
+
+const result = await controls.run(
+  {
+    toolName: 'cpu-sandbox-run',
+    runKey: 'sandbox-run-1',
+    destination: sandbox.endpoint,
+    action: 'execute',
+  },
+  async ({ signal }) => sandbox.run()
+)
+
+console.log('Result:', JSON.stringify(result, null, 2))
+await sandbox.delete()
+```
+
+Full runtime controls documentation: https://www.buildfunctions.com/docs/runtime-controls
+
+The SDK is currently in beta. If you encounter any issues or have specific syntax requirements, please reach out and contact us at team@buildfunctions.com, and we’ll work to address them.
