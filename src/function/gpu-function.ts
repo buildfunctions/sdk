@@ -10,7 +10,7 @@ import { detectFramework } from '../lib/framework.js';
 import { resolveCode, getCallerFile } from '../lib/resolve-code.js';
 import { dirname } from 'path';
 
-const DEFAULT_GPU_BUILD_URL = 'https://prod-gpu-build.buildfunctions.link';
+const DEFAULT_GPU_BUILD_URL = 'https://prod-gpu-build-server.buildfunctions.link';
 
 interface DeployResponse {
   success?: boolean;

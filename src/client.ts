@@ -25,7 +25,7 @@ import type {
 } from './types/index.js';
 
 const DEFAULT_BASE_URL = 'https://www.buildfunctions.com';
-const DEFAULT_GPU_BUILD_URL = 'https://prod-gpu-build.buildfunctions.link';
+const DEFAULT_GPU_BUILD_URL = 'https://prod-gpu-build-server.buildfunctions.link';
 
 function formatRequirements(requirements: string | string[] | undefined): string {
   if (!requirements) return '';

@@ -14,7 +14,7 @@ import { existsSync, statSync } from 'fs';
 import { basename } from 'path';
 import { getFilesInDirectory, uploadModelFiles } from '../lib/uploader.js';
 
-const DEFAULT_GPU_BUILD_URL = 'https://prod-gpu-build.buildfunctions.link';
+const DEFAULT_GPU_BUILD_URL = 'https://prod-gpu-build-server.buildfunctions.link';
 const DEFAULT_BASE_URL = 'https://www.buildfunctions.com';
 
 // Global configuration
