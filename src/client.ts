@@ -8,6 +8,7 @@ import { parseMemory } from './lib/memory.js';
 import { detectFramework } from './lib/framework.js';
 import { resolveCode, getCallerFile } from './lib/resolve-code.js';
 import { dirname } from 'path';
+import { resolveGpuBuildUrl } from './lib/internal-endpoints.js';
 import { setCpuSandboxApiToken } from './sandbox/cpu-sandbox.js';
 import { setGpuSandboxApiToken } from './sandbox/gpu-sandbox.js';
 import { setApiToken } from './function/cpu-function.js';
@@ -25,7 +26,6 @@ import type {
 } from './types/index.js';
 
 const DEFAULT_BASE_URL = 'https://www.buildfunctions.com';
-const DEFAULT_GPU_BUILD_URL = 'https://prod-gpu-build-server.buildfunctions.link';
 
 function formatRequirements(requirements: string | string[] | undefined): string {
   if (!requirements) return '';
@@ -245,7 +245,7 @@ export async function Buildfunctions(config: BuildfunctionsConfig): Promise<Buil
   http.setToken(authResponse.sessionToken);
 
   const baseUrl = config.baseUrl ?? DEFAULT_BASE_URL;
-  const gpuBuildUrl = config.gpuBuildUrl ?? DEFAULT_GPU_BUILD_URL;
+  const gpuBuildUrl = resolveGpuBuildUrl(config.gpuBuildUrl, authResponse.user);
   const userId = authResponse.user.id;
   const username = authResponse.user.username || undefined;
   const computeTier = authResponse.user.computeTier || undefined;

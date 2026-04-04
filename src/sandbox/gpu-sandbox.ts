@@ -7,14 +7,13 @@ import type { GPUSandboxConfig, GPUSandboxInstance, RunResult, UploadOptions, GP
 import { ValidationError, BuildfunctionsError } from '../lib/errors.js';
 import { parseMemory } from '../lib/memory.js';
 import { detectFramework } from '../lib/framework.js';
+import { DEFAULT_GPU_BUILD_URL } from '../lib/internal-endpoints.js';
 import { resolveCode, getCallerFile } from '../lib/resolve-code.js';
 import { dirname } from 'path';
 import { readFile } from 'fs/promises';
 import { existsSync, statSync } from 'fs';
 import { basename } from 'path';
 import { getFilesInDirectory, uploadModelFiles } from '../lib/uploader.js';
-
-const DEFAULT_GPU_BUILD_URL = 'https://prod-gpu-build-server.buildfunctions.link';
 const DEFAULT_BASE_URL = 'https://www.buildfunctions.com';
 
 // Global configuration

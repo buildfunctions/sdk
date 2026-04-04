@@ -7,10 +7,9 @@ import type { GPUFunctionOptions, DeployedFunction } from '../types/index.js';
 import { ValidationError } from '../lib/errors.js';
 import { parseMemory } from '../lib/memory.js';
 import { detectFramework } from '../lib/framework.js';
+import { DEFAULT_GPU_BUILD_URL } from '../lib/internal-endpoints.js';
 import { resolveCode, getCallerFile } from '../lib/resolve-code.js';
 import { dirname } from 'path';
-
-const DEFAULT_GPU_BUILD_URL = 'https://prod-gpu-build-server.buildfunctions.link';
 
 interface DeployResponse {
   success?: boolean;

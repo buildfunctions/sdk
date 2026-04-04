@@ -125,6 +125,7 @@ import { setGpuApiToken } from './function/gpu-function.js';
 import { setCpuSandboxApiToken } from './sandbox/cpu-sandbox.js';
 import { setGpuSandboxApiToken } from './sandbox/gpu-sandbox.js';
 import { setModelApiToken } from './model/model.js';
+import { resolveGpuBuildUrl } from './lib/internal-endpoints.js';
 
 export function init(
   apiToken: string,
@@ -134,9 +135,15 @@ export function init(
   username?: string,
   computeTier?: string
 ): void {
+  const resolvedGpuBuildUrl = resolveGpuBuildUrl(gpuBuildUrl, {
+    id: userId ?? '',
+    username: username ?? null,
+    email: null,
+  });
+
   setApiToken(apiToken, baseUrl);
-  setGpuApiToken(apiToken, gpuBuildUrl, userId, username, computeTier, baseUrl);
+  setGpuApiToken(apiToken, resolvedGpuBuildUrl, userId, username, computeTier, baseUrl);
   setCpuSandboxApiToken(apiToken, baseUrl);
-  setGpuSandboxApiToken(apiToken, gpuBuildUrl, userId, username, computeTier, baseUrl);
+  setGpuSandboxApiToken(apiToken, resolvedGpuBuildUrl, userId, username, computeTier, baseUrl);
   setModelApiToken(apiToken, baseUrl, userId, username);
 }
