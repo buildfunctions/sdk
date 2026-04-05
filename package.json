@@ -1,6 +1,6 @@
 {
   "name": "buildfunctions",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "The Buildfunctions SDK for interacting with serverless functions, hardware-isolated sandboxes, and runtime controls for AI agents",
   "type": "module",
   "main": "./dist/index.js",

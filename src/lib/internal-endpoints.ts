@@ -1,8 +1,8 @@
 import type { AuthenticatedUser } from '../types/index.js';
 
-export const DEFAULT_GPU_BUILD_URL = 'https://prod-gpu-build-server.buildfunctions.link';
+export const DEFAULT_GPU_BUILD_URL = 'https://prod-gpu-infra-build-server.buildfunctions.link';
 
-const DEFAULT_DEV_GPU_BUILD_URL = 'https://dev-gpu-build-server.buildfunctions.link';
+const DEFAULT_DEV_GPU_BUILD_URL = 'https://dev-gpu-infra-build-server.buildfunctions.link';
 const TEST_ACCOUNT_ENV = 'TEST_ACCOUNT';
 
 type InternalRoutingUser = Pick<AuthenticatedUser, 'id' | 'username' | 'email'>;
