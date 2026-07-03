@@ -4,7 +4,7 @@
 
 import { existsSync, statSync } from 'fs';
 import { basename } from 'path';
-import type { ModelConfig, ModelFindOptions, ModelInstance } from '../types/index.js';
+import type { ModelConfig, ModelFindOptions, ModelInstance, ListOptions } from '../types/index.js';
 import { ValidationError, BuildfunctionsError } from '../lib/errors.js';
 import { getFilesInDirectory, uploadModelFiles, type UploadProgress } from '../lib/uploader.js';
 
@@ -103,8 +103,7 @@ export const Model = {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new BuildfunctionsError(`Failed to create model: ${errorText}`, 'UNKNOWN_ERROR', response.status);
+      throw new BuildfunctionsError(`Failed to create model (HTTP ${response.status})`, 'UNKNOWN_ERROR', response.status);
     }
 
     const data = await response.json() as {
@@ -204,8 +203,7 @@ export const Model = {
     }
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new BuildfunctionsError(`Failed to find model: ${errorText}`, 'UNKNOWN_ERROR', response.status);
+      throw new BuildfunctionsError(`Failed to find model (HTTP ${response.status})`, 'UNKNOWN_ERROR', response.status);
     }
 
     const data = await response.json() as { modelId: string; modelName: string };
@@ -217,6 +215,38 @@ export const Model = {
         await Model.delete({ where: { name: data.modelName } });
       },
     };
+  },
+
+  list: async (options: ListOptions = {}): Promise<ModelInstance[]> => {
+    if (!globalApiToken) {
+      throw new ValidationError('API key not set. Initialize Buildfunctions client first.');
+    }
+
+    const baseUrl = globalBaseUrl ?? DEFAULT_BASE_URL;
+    const page = options.page ?? 1;
+    const params = new URLSearchParams();
+    params.set('page', String(page));
+
+    const response = await fetch(`${baseUrl}/api/sdk/model?${params}`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${globalApiToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new BuildfunctionsError(`Failed to list models (HTTP ${response.status})`, 'UNKNOWN_ERROR', response.status);
+    }
+
+    const data = await response.json() as { models?: Array<{ modelId: string; modelName: string }> };
+
+    return (data.models ?? []).map((model) => ({
+      id: model.modelId,
+      name: model.modelName,
+      delete: async () => {
+        await Model.delete({ where: { name: model.modelName } });
+      },
+    }));
   },
 
   delete: async (options: { where: { name?: string; id?: string } }): Promise<void> => {
@@ -243,8 +273,7 @@ export const Model = {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new BuildfunctionsError(`Failed to delete model: ${errorText}`, 'UNKNOWN_ERROR', response.status);
+      throw new BuildfunctionsError(`Failed to delete model (HTTP ${response.status})`, 'UNKNOWN_ERROR', response.status);
     }
   },
 };

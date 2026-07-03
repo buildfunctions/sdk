@@ -144,8 +144,7 @@ export async function uploadMultipartFile(
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to complete upload: ${response.statusText} - ${errorText}`);
+    throw new Error(`Failed to complete upload (HTTP ${response.status})`);
   }
 }
 
@@ -291,8 +290,7 @@ export async function transferFilesToEFS(
     });
 
     if (!transferResponse.ok) {
-      const errorText = await transferResponse.text();
-      throw new Error(`Failed to transfer ${fileDetail.fileName}: ${errorText}`);
+      throw new Error(`Failed to transfer ${fileDetail.fileName} (HTTP ${transferResponse.status})`);
     }
   }
 }

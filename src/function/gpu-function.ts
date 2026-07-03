@@ -260,8 +260,8 @@ function createGPUFunctionBuilder(
             });
           });
 
-          res.on('error', (error) => {
-            reject(error);
+          res.on('error', () => {
+            reject(new Error('Network error during deployment'));
           });
         }
       );
@@ -278,8 +278,8 @@ function createGPUFunctionBuilder(
         req.destroy(new Error('Request timeout'));
       });
 
-      req.on('error', (error) => {
-        reject(error);
+      req.on('error', () => {
+        reject(new Error('Network error during deployment'));
       });
 
       // Send the request body

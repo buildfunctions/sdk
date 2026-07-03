@@ -1,6 +1,6 @@
 import 'dotenv/config'
-import { Buildfunctions } from '../../dist/index.js'
-// import { Buildfunctions, CPUFunction } from 'buildfunctions'
+import { Buildfunctions, CPUSandbox, GPUSandbox } from '../../dist/index.js'
+// import { Buildfunctions, CPUSandbox, GPUSandbox } from 'buildfunctions'
 
 const API_TOKEN = process.env.BUILDFUNCTIONS_API_TOKEN
 
@@ -50,6 +50,13 @@ async function testAuth() {
     const sandboxes = await http.get('/api/sdk/sandbox')
     console.log('   CPU Sandboxes:', sandboxes.cpuCount || 0)
     console.log('   GPU Sandboxes:', sandboxes.gpuCount || 0)
+
+    // Step 4: List Sandboxes via typed SDK
+    console.log('\n4. Listing Sandboxes (typed SDK)...')
+    const cpuSandboxes = await CPUSandbox.list()
+    const gpuSandboxes = await GPUSandbox.list()
+    console.log('   CPUSandbox.list():', cpuSandboxes.length)
+    console.log('   GPUSandbox.list():', gpuSandboxes.length)
 
     console.log('\nSDK Authentication test completed!')
 

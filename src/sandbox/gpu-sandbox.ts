@@ -3,7 +3,7 @@
  */
 
 import https from 'https';
-import type { GPUSandboxConfig, GPUSandboxInstance, RunResult, UploadOptions, GPUType } from '../types/index.js';
+import type { GPUSandboxConfig, GPUSandboxInstance, RunResult, UploadOptions, GPUType, ListOptions, FindUniqueOptions } from '../types/index.js';
 import { ValidationError, BuildfunctionsError } from '../lib/errors.js';
 import { parseMemory } from '../lib/memory.js';
 import { detectFramework } from '../lib/framework.js';
@@ -297,7 +297,7 @@ function createGPUSandboxInstance(
     }
 
     if (!response.ok) {
-      throw new BuildfunctionsError(`Execution failed: ${responseText}`, 'UNKNOWN_ERROR', response.status);
+      throw new BuildfunctionsError(`Execution failed (HTTP ${response.status})`, 'UNKNOWN_ERROR', response.status);
     }
 
     // Try to parse as JSON, otherwise return raw text
@@ -476,7 +476,7 @@ export const GPUSandbox = {
             }
 
             if (res.statusCode !== 201 && res.statusCode !== 200) {
-              reject(new BuildfunctionsError(`Failed to create sandbox: ${responseText}`, 'UNKNOWN_ERROR', res.statusCode ?? 500));
+              reject(new BuildfunctionsError(`Failed to create sandbox (HTTP ${res.statusCode ?? 500})`, 'UNKNOWN_ERROR', res.statusCode ?? 500));
               return;
             }
 
@@ -491,8 +491,8 @@ export const GPUSandbox = {
                   baseUrl
                 );
                 console.log('   Model files uploaded successfully');
-              } catch (uploadError) {
-                reject(new BuildfunctionsError(`Sandbox created but model upload failed: ${(uploadError as Error).message}`, 'UNKNOWN_ERROR'));
+              } catch {
+                reject(new BuildfunctionsError('Sandbox created but model upload failed', 'UNKNOWN_ERROR'));
                 return;
               }
             }
@@ -514,8 +514,8 @@ export const GPUSandbox = {
             ));
           });
 
-          res.on('error', (error) => {
-            reject(error);
+          res.on('error', () => {
+            reject(new BuildfunctionsError('Network error while creating sandbox', 'NETWORK_ERROR'));
           });
         }
       );
@@ -531,12 +531,69 @@ export const GPUSandbox = {
         req.destroy(new Error('Request timeout'));
       });
 
-      req.on('error', (error) => {
-        reject(error);
+      req.on('error', () => {
+        reject(new BuildfunctionsError('Network error while creating sandbox', 'NETWORK_ERROR'));
       });
 
       req.write(postData);
       req.end();
     });
+  },
+
+  list: async (options: ListOptions = {}): Promise<GPUSandboxInstance[]> => {
+    if (!globalApiToken) {
+      throw new ValidationError('API key not set. Initialize Buildfunctions client first.');
+    }
+
+    const apiToken = globalApiToken;
+    const baseUrl = globalBaseUrl ?? DEFAULT_BASE_URL;
+    const page = options.page ?? 1;
+    const params = new URLSearchParams();
+    params.set('type', 'gpu');
+    params.set('page', String(page));
+
+    const response = await fetch(`${baseUrl}/api/sdk/sandbox?${params}`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${apiToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new BuildfunctionsError(`Failed to list sandboxes (HTTP ${response.status})`, 'UNKNOWN_ERROR', response.status);
+    }
+
+    const data = await response.json() as { gpuSandboxes?: Array<{ id: string; name: string; runtime: string; gpu: GPUType; timeoutSeconds: number }> };
+
+    return (data.gpuSandboxes ?? []).map((sandbox) =>
+      createGPUSandboxInstance(
+        sandbox.id,
+        sandbox.name,
+        sandbox.runtime,
+        sandbox.gpu,
+        `https://${sandbox.name}.buildfunctions.app`,
+        apiToken,
+        baseUrl,
+        sandbox.timeoutSeconds ?? 300
+      )
+    );
+  },
+
+  findUnique: async (options: FindUniqueOptions): Promise<GPUSandboxInstance | null> => {
+    const { where } = options;
+
+    if (where.id) {
+      const sandboxes = await GPUSandbox.list();
+      const found = sandboxes.find((sandbox) => sandbox.id === where.id);
+      return found ?? null;
+    }
+
+    if (where.name) {
+      const sandboxes = await GPUSandbox.list();
+      const found = sandboxes.find((sandbox) => sandbox.name === where.name);
+      return found ?? null;
+    }
+
+    return null;
   },
 };

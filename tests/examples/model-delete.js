@@ -20,6 +20,11 @@ async function testModelDelete() {
         const buildfunctions = await Buildfunctions({ apiToken: API_TOKEN })
         console.log('   Authenticated as:', buildfunctions.user.username)
 
+        // List all models (typed SDK)
+        console.log('\nListing all Models...')
+        const allModels = await Model.list()
+        console.log('   Total Models:', allModels.length)
+
         // Step 2: Find model
         console.log('\n2. Finding model...')
 

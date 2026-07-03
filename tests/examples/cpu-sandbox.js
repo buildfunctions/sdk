@@ -36,6 +36,14 @@ async function testCpuSandbox() {
     console.log('   Runtime:', sandbox.runtime)
     console.log('   Endpoint:', sandbox.endpoint)
 
+    // Verify in list + findUnique (typed SDK)
+    console.log('\nVerifying CPU Sandbox in list...')
+    const sandboxList = await CPUSandbox.list()
+    const foundInList = sandboxList.find(s => s.id === sandbox.id)
+    console.log('   Found in CPUSandbox.list():', !!foundInList)
+    const foundUnique = await CPUSandbox.findUnique({ where: { id: sandbox.id } })
+    console.log('   CPUSandbox.findUnique by id:', foundUnique ? foundUnique.name : 'not found')
+
     // Step 3: Run CPU Sandbox
     console.log('\n3. Running CPU Sandbox...')
     const result = await sandbox.run()

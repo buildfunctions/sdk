@@ -2,7 +2,7 @@
  * CPU Sandbox - Hardware-isolated execution environment for untrusted AI actions
  */
 
-import type { CPUSandboxConfig, CPUSandboxInstance, RunResult, UploadOptions } from '../types/index.js';
+import type { CPUSandboxConfig, CPUSandboxInstance, RunResult, UploadOptions, ListOptions, FindUniqueOptions } from '../types/index.js';
 import { ValidationError, BuildfunctionsError } from '../lib/errors.js';
 import { parseMemory } from '../lib/memory.js';
 import { resolveCode, getCallerFile } from '../lib/resolve-code.js';
@@ -166,7 +166,7 @@ function createCPUSandboxInstance(
     }
 
     if (response.status < 200 || response.status >= 300) {
-      throw new BuildfunctionsError(`Execution failed: ${responseText}`, 'UNKNOWN_ERROR', response.status);
+      throw new BuildfunctionsError(`Execution failed (HTTP ${response.status})`, 'UNKNOWN_ERROR', response.status);
     }
 
     // Try to parse as JSON, otherwise return raw text
@@ -326,14 +326,14 @@ export const CPUSandbox = {
     const responseText = await response.text();
 
     if (!response.ok) {
-      throw new BuildfunctionsError(`Failed to create sandbox: ${responseText}`, 'UNKNOWN_ERROR', response.status);
+      throw new BuildfunctionsError(`Failed to create sandbox (HTTP ${response.status})`, 'UNKNOWN_ERROR', response.status);
     }
 
     let data: { siteId: string; endpoint: string };
     try {
       data = JSON.parse(responseText);
     } catch {
-      throw new BuildfunctionsError(`Invalid JSON response: ${responseText}`, 'UNKNOWN_ERROR', response.status);
+      throw new BuildfunctionsError(`Invalid JSON response (HTTP ${response.status})`, 'UNKNOWN_ERROR', response.status);
     }
 
     // Response has siteId and endpoint
@@ -342,5 +342,53 @@ export const CPUSandbox = {
     const sandboxRuntime = config.runtime ?? config.language;
 
     return createCPUSandboxInstance(sandboxId, name, sandboxRuntime, sandboxEndpoint, globalApiToken, baseUrl);
+  },
+
+  list: async (options: ListOptions = {}): Promise<CPUSandboxInstance[]> => {
+    if (!globalApiToken) {
+      throw new ValidationError('API key not set. Initialize Buildfunctions client first.');
+    }
+
+    const apiToken = globalApiToken;
+    const baseUrl = globalBaseUrl ?? DEFAULT_BASE_URL;
+    const page = options.page ?? 1;
+    const params = new URLSearchParams();
+    params.set('type', 'cpu');
+    params.set('page', String(page));
+
+    const response = await fetch(`${baseUrl}/api/sdk/sandbox?${params}`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${apiToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new BuildfunctionsError(`Failed to list sandboxes (HTTP ${response.status})`, 'UNKNOWN_ERROR', response.status);
+    }
+
+    const data = await response.json() as { cpuSandboxes?: Array<{ id: string; name: string; runtime: string }> };
+
+    return (data.cpuSandboxes ?? []).map((sandbox) =>
+      createCPUSandboxInstance(sandbox.id, sandbox.name, sandbox.runtime, `https://${sandbox.name}.buildfunctions.app`, apiToken, baseUrl)
+    );
+  },
+
+  findUnique: async (options: FindUniqueOptions): Promise<CPUSandboxInstance | null> => {
+    const { where } = options;
+
+    if (where.id) {
+      const sandboxes = await CPUSandbox.list();
+      const found = sandboxes.find((sandbox) => sandbox.id === where.id);
+      return found ?? null;
+    }
+
+    if (where.name) {
+      const sandboxes = await CPUSandbox.list();
+      const found = sandboxes.find((sandbox) => sandbox.name === where.name);
+      return found ?? null;
+    }
+
+    return null;
   },
 };
