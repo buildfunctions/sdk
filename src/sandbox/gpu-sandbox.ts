@@ -5,6 +5,7 @@
 import https from 'https';
 import type { GPUSandboxConfig, GPUSandboxInstance, RunResult, UploadOptions, GPUType, ListOptions, FindUniqueOptions } from '../types/index.js';
 import { ValidationError, BuildfunctionsError } from '../lib/errors.js';
+import { assertBuildAllowed } from '../lib/compliance-preflight.js';
 import { parseMemory } from '../lib/memory.js';
 import { detectFramework } from '../lib/framework.js';
 import { DEFAULT_GPU_BUILD_URL } from '../lib/internal-endpoints.js';
@@ -441,6 +442,10 @@ export const GPUSandbox = {
       computeTier: globalComputeTier,
       runCommand: null,
     };
+
+    // Compliance pre-flight: buildfunctions checks the caller's live country and
+    // blocks (451/403) before the build request is sent. Throws if not permitted.
+    await assertBuildAllowed({ baseUrl, apiToken: globalApiToken || '', body });
 
     const buildUrl = `${gpuBuildUrl}/build`;
     const postData = JSON.stringify(body);

@@ -509,6 +509,8 @@ export type ErrorCode =
   | 'SIZE_LIMIT_EXCEEDED'
   | 'VALIDATION_ERROR'
   | 'NETWORK_ERROR'
+  | 'COUNTRY_RESTRICTED'
+  | 'FEATURE_ACCESS_REVIEW_REQUIRED'
   | 'UNKNOWN_ERROR';
 
 // Model resource types

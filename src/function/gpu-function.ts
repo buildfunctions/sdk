@@ -9,6 +9,7 @@ import { parseMemory } from '../lib/memory.js';
 import { detectFramework } from '../lib/framework.js';
 import { DEFAULT_GPU_BUILD_URL } from '../lib/internal-endpoints.js';
 import { resolveCode, getCallerFile } from '../lib/resolve-code.js';
+import { assertBuildAllowed } from '../lib/compliance-preflight.js';
 import { dirname } from 'path';
 
 interface DeployResponse {
@@ -187,6 +188,10 @@ function createGPUFunctionBuilder(
       computeTier,
       runCommand: null,
     };
+
+    // Compliance pre-flight: buildfunctions checks the caller's live country and
+    // blocks (451/403) before the build request is sent. Throws if not permitted.
+    await assertBuildAllowed({ baseUrl: resolvedBaseUrl, apiToken, body });
 
     const buildUrl = `${resolvedGpuBuildUrl}/build`;
     const postData = JSON.stringify(body);

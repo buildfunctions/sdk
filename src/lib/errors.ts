@@ -71,6 +71,8 @@ function mapErrorCode(code: string | undefined, statusCode: number): ErrorCode {
       'MAX_CAPACITY',
       'SIZE_LIMIT_EXCEEDED',
       'VALIDATION_ERROR',
+      'COUNTRY_RESTRICTED',
+      'FEATURE_ACCESS_REVIEW_REQUIRED',
     ];
     if (validCodes.includes(code as ErrorCode)) {
       return code as ErrorCode;
